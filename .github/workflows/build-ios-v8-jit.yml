@@ -1,0 +1,88 @@
+name: Build iOS JIT V8 Codex
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install workflow test dependency
+        run: python3 -m pip install --user PyYAML
+
+      - name: Install artifact tools
+        run: brew install dpkg ldid
+
+      - name: Validate workflow and shell syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+          p = Path(".github/workflows/build-ios-v8-jit.yml")
+          assert yaml.safe_load(p.read_text())["jobs"]["build"]["runs-on"] == "macos-14"
+          PY
+          sh -n \
+            scripts/build-ios.sh \
+            scripts/build-v8-archive.sh \
+            scripts/package.sh \
+            scripts/sign-ios.sh \
+            scripts/verify-artifacts.sh
+
+      - name: Run unit tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Build iOS Codex and Code Mode host
+        shell: bash
+        run: |
+          set -e -o pipefail
+          mkdir -p logs
+          if scripts/build-ios.sh 2>&1 | tee logs/cargo-v8-build-primary.log; then
+            exit 0
+          fi
+          scripts/build-v8-archive.sh 2>&1 | tee logs/cargo-v8-archive.log
+          scripts/build-ios.sh archive 2>&1 | tee logs/cargo-v8-build-archive-retry.log
+
+      - name: Sign iOS executables
+        shell: bash
+        run: |
+          set -e -o pipefail
+          scripts/sign-ios.sh 2>&1 | tee logs/sign-ios.log
+
+      - name: Package iOS artifacts
+        shell: bash
+        run: |
+          set -e -o pipefail
+          scripts/package.sh 2>&1 | tee logs/package-ios.log
+
+      - name: Verify iOS artifacts
+        shell: bash
+        run: |
+          set -e -o pipefail
+          scripts/verify-artifacts.sh 2>&1 | tee logs/verify-artifacts.log
+
+      - name: Upload verified iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-v8-jit-artifacts
+          path: |
+            out/codex-ios-roothide-0.145.0-4-jit.deb
+            out/codex-ios-roothide-0.145.0-4-jit.zip
+            out/SHA256SUMS
+          if-no-files-found: error
+
+      - name: Upload iOS build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-v8-jit-logs
+          path: logs/
+          if-no-files-found: warn
