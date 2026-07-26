@@ -52,12 +52,13 @@ index a2a2e45..c94aa88 100644
 +    {
        gn_args.push("treat_warnings_as_errors=false".to_string());
      }
-@@ -401,2 +424,15 @@ fn build_v8(is_asan: bool) {
+@@ -401,2 +424,16 @@ fn build_v8(is_asan: bool) {
    let target_triple = env::var("TARGET").unwrap();
 +  if target_triple == "aarch64-apple-ios" {
 +    gn_args.extend([
 +      r#"target_os="ios""#.to_string(),
 +      r#"target_platform="iphoneos""#.to_string(),
++      r#"target_environment="device""#.to_string(),
 +      r#"v8_target_cpu="arm64""#.to_string(),
 +      r#"ios_deployment_target="16.0""#.to_string(),
 +      "use_sysroot=false".to_string(),

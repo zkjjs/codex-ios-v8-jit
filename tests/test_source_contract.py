@@ -53,6 +53,7 @@ class SourceContractTest(unittest.TestCase):
             'target_os == "ios"',
             'target_os="ios"',
             'target_platform="iphoneos"',
+            'target_environment="device"',
             'ios_deployment_target="16.0"',
             'v8_enable_lite_mode=false',
             'v8_enable_turbofan=true',
@@ -122,6 +123,7 @@ class SourceContractTest(unittest.TestCase):
             {
                 "target_os",
                 "target_platform",
+                "target_environment",
                 "target_cpu",
                 "v8_target_cpu",
                 "ios_deployment_target",
