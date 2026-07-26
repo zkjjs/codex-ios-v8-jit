@@ -1,0 +1,12 @@
+Package: codex-ios-roothide
+Name: codex-ios-roothide
+Version: 0.145.0-4-jit
+Architecture: iphoneos-arm64e
+Section: Development
+Priority: optional
+Maintainer: DaFei
+Depends: firmware (>= 14.0), nodejs22-ios-roothide (>= 22.12.0), ldid
+Description: OpenAI Codex CLI 0.145.0 with JIT Code Mode for roothide iOS arm64
+ Native aarch64-apple-ios build of the OpenAI Codex coding agent.
+ Includes the Code Mode host with the required JIT entitlements.
+ Preserves the existing roothide configuration directory and custom providers.
