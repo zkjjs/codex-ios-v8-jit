@@ -188,8 +188,23 @@ class SourceContractTest(unittest.TestCase):
             prepare_run.index("scripts/apply-patches.sh"),
         )
 
-    def test_apply_patches_script_is_executable(self):
-        self.assertTrue(os.access(ROOT / "scripts/apply-patches.sh", os.X_OK))
+    def test_all_shell_scripts_are_executable(self):
+        scripts = sorted((ROOT / "scripts").glob("*.sh"))
+        self.assertGreaterEqual(
+            {script.name for script in scripts},
+            {
+                "fetch-upstream.sh",
+                "apply-patches.sh",
+                "build-ios.sh",
+                "build-v8-archive.sh",
+                "sign-ios.sh",
+                "package.sh",
+                "verify-artifacts.sh",
+            },
+        )
+        for script in scripts:
+            with self.subTest(script=script.name):
+                self.assertTrue(os.access(script, os.X_OK))
 
     def test_ios_build_archive_mode_uses_verified_archive(self):
         build = (ROOT / "scripts/build-ios.sh").read_text()
