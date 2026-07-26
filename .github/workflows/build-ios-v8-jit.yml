@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: macos-14
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +26,19 @@ jobs:
 
       - name: Validate workflow and shell syntax
         run: |
+          test -d "$DEVELOPER_DIR"
+          macos_sdk_version="$(xcrun --sdk macosx --show-sdk-version)"
+          macos_sdk_major="${macos_sdk_version%%.*}"
+          case "$macos_sdk_major" in
+            ""|*[!0-9]*)
+              echo "error: invalid macOS SDK version: $macos_sdk_version" >&2
+              exit 1
+              ;;
+          esac
+          [ "$macos_sdk_major" -ge 15 ] || {
+            echo "error: macOS SDK 15+ required, found $macos_sdk_version" >&2
+            exit 1
+          }
           python3 - <<'PY'
           from pathlib import Path
           import yaml
