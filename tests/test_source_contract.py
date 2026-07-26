@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import re
 import unittest
 import yaml
@@ -157,6 +158,38 @@ class SourceContractTest(unittest.TestCase):
             run.index("scripts/build-v8-archive.sh 2>&1 | tee"),
             run.index("scripts/build-ios.sh archive 2>&1 | tee"),
         )
+
+    def test_ios_build_workflow_prepares_sources_before_unit_tests(self):
+        workflow = yaml.safe_load(
+            (ROOT / ".github/workflows/build-ios-v8-jit.yml").read_text()
+        )
+        steps = workflow["jobs"]["build"]["steps"]
+        prepare_index = next(
+            (
+                index
+                for index, step in enumerate(steps)
+                if step.get("name") == "Prepare pinned source fixtures"
+            ),
+            None,
+        )
+        self.assertIsNotNone(prepare_index)
+        test_index = next(
+            index
+            for index, step in enumerate(steps)
+            if step.get("name") == "Run unit tests"
+        )
+        prepare_run = steps[prepare_index]["run"]
+
+        self.assertLess(prepare_index, test_index)
+        self.assertIn("scripts/fetch-upstream.sh", prepare_run)
+        self.assertIn("scripts/apply-patches.sh", prepare_run)
+        self.assertLess(
+            prepare_run.index("scripts/fetch-upstream.sh"),
+            prepare_run.index("scripts/apply-patches.sh"),
+        )
+
+    def test_apply_patches_script_is_executable(self):
+        self.assertTrue(os.access(ROOT / "scripts/apply-patches.sh", os.X_OK))
 
     def test_ios_build_archive_mode_uses_verified_archive(self):
         build = (ROOT / "scripts/build-ios.sh").read_text()
