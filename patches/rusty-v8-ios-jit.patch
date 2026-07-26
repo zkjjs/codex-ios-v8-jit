@@ -1,0 +1,70 @@
+diff --git a/build.rs b/build.rs
+index a2a2e45..c94aa88 100644
+--- a/build.rs
++++ b/build.rs
+@@ -199,2 +199,19 @@ fn build_binding() {
+     clang_args.push(sdk_path.trim().to_string());
++  } else if target_os == "ios" {
++    let output = Command::new("xcrun")
++      .args(["--sdk", "iphoneos", "--show-sdk-path"])
++      .output()
++      .unwrap();
++    if !output.status.success() {
++      panic!(
++        "xcrun failed to locate the iPhoneOS SDK: {}",
++        String::from_utf8_lossy(&output.stderr)
++      );
++    }
++    clang_args.extend([
++      "-isysroot".to_string(),
++      String::from_utf8(output.stdout).unwrap().trim().to_string(),
++      "-target".to_string(),
++      "arm64-apple-ios16.0".to_string(),
++    ]);
+   } else if target_os == "linux" {
+@@ -273,12 +290,16 @@ fn build_v8(is_asan: bool) {
+   if is_asan {
+     gn_args.push("is_asan=true".to_string());
+   }
+-  gn_args.push(format!(
+-    "use_custom_libcxx={}",
+-    env::var("CARGO_FEATURE_USE_CUSTOM_LIBCXX").is_ok()
+-  ));
+-
++  let use_custom_libcxx = target_os != "ios"
++    && env::var("CARGO_FEATURE_USE_CUSTOM_LIBCXX").is_ok();
++  gn_args.push(format!("use_custom_libcxx={use_custom_libcxx}"));
++
+   let extra_args = {
+-    if env::var("CARGO_FEATURE_V8_ENABLE_SANDBOX").is_ok() {
++    if target_os == "ios" {
++      vec![
++        "v8_enable_sandbox=false",
++        "v8_enable_pointer_compression=false",
++      ]
++    } else if env::var("CARGO_FEATURE_V8_ENABLE_SANDBOX").is_ok() {
+       vec![
+         // Enable pointer compression (along with its dependencies)
+@@ -339,3 +360,5 @@ fn build_v8(is_asan: bool) {
+-    if target_os == "android" && target_arch == "aarch64" {
++    if target_os == "ios"
++      || (target_os == "android" && target_arch == "aarch64")
++    {
+       gn_args.push("treat_warnings_as_errors=false".to_string());
+     }
+@@ -401,2 +424,15 @@ fn build_v8(is_asan: bool) {
+   let target_triple = env::var("TARGET").unwrap();
++  if target_triple == "aarch64-apple-ios" {
++    gn_args.extend([
++      r#"target_os="ios""#.to_string(),
++      r#"target_platform="iphoneos""#.to_string(),
++      r#"v8_target_cpu="arm64""#.to_string(),
++      r#"ios_deployment_target="16.0""#.to_string(),
++      "use_sysroot=false".to_string(),
++      "v8_enable_lite_mode=false".to_string(),
++      "v8_enable_turbofan=true".to_string(),
++      "v8_enable_maglev=true".to_string(),
++      "v8_enable_webassembly=false".to_string(),
++    ]);
++  }
+   // check if the target triple describes a non-native environment
