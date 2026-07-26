@@ -15,3 +15,9 @@ git -C "$root/work/rusty_v8" fetch --depth 1 origin 5d0e31ea6bf67f4559faa759b91e
 git -C "$root/work/rusty_v8" checkout --detach 5d0e31ea6bf67f4559faa759b91e22bc3f1cd696
 test "$(git -C "$root/work/rusty_v8" rev-parse HEAD)" = \
   "5d0e31ea6bf67f4559faa759b91e22bc3f1cd696"
+git -C "$root/work/rusty_v8" submodule sync --recursive
+git -C "$root/work/rusty_v8" submodule update --init --recursive
+if [ ! -f "$root/work/rusty_v8/v8/DEPS" ]; then
+  echo "error: rusty_v8 recursive submodule initialization did not create v8/DEPS" >&2
+  exit 1
+fi
