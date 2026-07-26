@@ -31,8 +31,8 @@ index a2a2e45..c94aa88 100644
 -    env::var("CARGO_FEATURE_USE_CUSTOM_LIBCXX").is_ok()
 -  ));
 -
-+  let use_custom_libcxx = target_os != "ios"
-+    && env::var("CARGO_FEATURE_USE_CUSTOM_LIBCXX").is_ok();
++  let use_custom_libcxx =
++    env::var("CARGO_FEATURE_USE_CUSTOM_LIBCXX").is_ok();
 +  gn_args.push(format!("use_custom_libcxx={use_custom_libcxx}"));
 +
    let extra_args = {
