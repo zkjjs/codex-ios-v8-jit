@@ -163,6 +163,27 @@ class SourceContractTest(unittest.TestCase):
             run.index("scripts/build-ios.sh archive 2>&1 | tee"),
         )
 
+    def test_ios_build_workflow_selects_xcode_with_macos_15_sdk(self):
+        workflow = yaml.safe_load(
+            (ROOT / ".github/workflows/build-ios-v8-jit.yml").read_text()
+        )
+        job = workflow["jobs"]["build"]
+        self.assertIn("env", job)
+        self.assertEqual(
+            job["env"]["DEVELOPER_DIR"],
+            "/Applications/Xcode_16.2.app/Contents/Developer",
+        )
+        validate = next(
+            step
+            for step in job["steps"]
+            if step.get("name") == "Validate workflow and shell syntax"
+        )
+        run = validate["run"]
+        self.assertIn('test -d "$DEVELOPER_DIR"', run)
+        self.assertIn("xcrun --sdk macosx --show-sdk-version", run)
+        self.assertRegex(run, r"\bmacos_sdk_major\b")
+        self.assertRegex(run, r'\[ "\$macos_sdk_major" -ge 15 \]')
+
     def test_ios_build_workflow_prepares_sources_before_unit_tests(self):
         workflow = yaml.safe_load(
             (ROOT / ".github/workflows/build-ios-v8-jit.yml").read_text()
