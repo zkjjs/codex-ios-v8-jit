@@ -1,0 +1,31 @@
+#!/var/jb/usr/bin/zsh
+if [ -n "${JB_ROOT:-}" ]; then
+    PREFIX="$JB_ROOT"
+else
+    PREFIX="$(ls -d /var/containers/Bundle/Application/.jbroot-* 2>/dev/null | head -n 1)"
+    [ -n "$PREFIX" ] || PREFIX="/var/jb"
+fi
+
+MODULE="${PREFIX}/usr/local/lib/node_modules/@openai/codex"
+CODEX_BIN="${MODULE}/vendor/aarch64-apple-ios/codex/codex"
+CODEX_PATH="${MODULE}/vendor/aarch64-apple-ios/path"
+
+export HOME="${PREFIX}/var/mobile/codex"
+export CODEX_HOME="${HOME}/.codex"
+export PATH="${CODEX_PATH}:${PREFIX}/usr/local/bin:${PREFIX}/usr/bin:${PREFIX}/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+export SHELL="${PREFIX}/usr/bin/zsh"
+export LANG="${LANG:-en_US.UTF-8}"
+export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+export TERM="${TERM:-xterm-256color}"
+export UV_THREADPOOL_SIZE="${UV_THREADPOOL_SIZE:-1}"
+
+mkdir -p "$HOME" "$CODEX_HOME"
+
+for cert in /etc/ssl/certs/cacert.pem /etc/ssl/cert.pem "${PREFIX}/etc/ssl/certs/cacert.pem"; do
+    if [ -f "$cert" ]; then
+        export SSL_CERT_FILE="$cert"
+        break
+    fi
+done
+
+exec "$CODEX_BIN" "$@"
