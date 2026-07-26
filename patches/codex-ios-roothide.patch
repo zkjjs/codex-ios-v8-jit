@@ -1,0 +1,70 @@
+diff --git a/codex-rs/Cargo.toml b/codex-rs/Cargo.toml
+index 17edbbfb2f1aabddde9dbd5a3192907f77f8369a..5c84b04ffd766b4df2ee410ebe10a001bbf44a93 100644
+--- a/codex-rs/Cargo.toml
++++ b/codex-rs/Cargo.toml
+@@ -267,7 +267,7 @@ mcp_test_support = { path = "mcp-server/tests/common" }
+ age = "0.11.1"
+ ansi-to-tui = "7.0.0"
+ anyhow = "1"
+-arboard = { version = "3", features = ["wayland-data-control"] }
++arboard = { version = "3" }
+ arc-swap = "1.9.0"
+ assert_cmd = "2"
+ assert_matches = "1.5.0"
+@@ -533,15 +533,15 @@ debug = "none"
+ strip = "symbols"
+ 
+ [profile.release]
+-lto = "thin"
+-debug = "line-tables-only"
++lto = "off"
++debug = "none"
+ split-debuginfo = "off"
+ # Keep release binaries symbolicateable until packaging has archived the
+ # sidecar symbols and stripped the binaries.
+-strip = false
++strip = "symbols"
+ 
+ # Balance parallel release code generation against binary size.
+-codegen-units = 4
++codegen-units = 16
+ 
+ [profile.profiling]
+ inherits = "release"
+@@ -558,6 +558,7 @@ opt-level = 0
+ [patch.crates-io]
+ # Uncomment to debug local changes.
+ # ratatui = { path = "../../ratatui" }
++v8 = { path = "../../rusty_v8" }
+ crossterm = { git = "https://github.com/nornagon/crossterm", rev = "87db8bfa6dc99427fd3b071681b07fc31c6ce995" }
+ ratatui = { git = "https://github.com/nornagon/ratatui", rev = "9b2ad1298408c45918ee9f8241a6f95498cdbed2" }
+ tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "0e5b2d73aa18dd9f0a50ee9ff199d5aef7594186" }
+diff --git a/codex-rs/cli/src/main.rs b/codex-rs/cli/src/main.rs
+index baaa57ce0b4e03e8dfda29267cb42737b27e230d..89144c4f5d7ffe07644f138a96872dbf0e2fcf39 100644
+--- a/codex-rs/cli/src/main.rs
++++ b/codex-rs/cli/src/main.rs
+@@ -44,6 +44,12 @@ use std::path::PathBuf;
+ use std::sync::Arc;
+ use supports_color::Stream;
+ 
++// iOS compatibility: older jailbreak runtimes may not export the stack probe
++// emitted by newer Apple SDK toolchains.
++#[cfg(all(target_os = "ios", target_arch = "aarch64"))]
++#[unsafe(no_mangle)]
++pub extern "C" fn __chkstk_darwin() {}
++
+ #[cfg(any(target_os = "macos", target_os = "windows"))]
+ mod app_cmd;
+ #[cfg(any(target_os = "macos", target_os = "windows"))]
+diff --git a/codex-rs/process-hardening/src/lib.rs b/codex-rs/process-hardening/src/lib.rs
+index f500e15d41487337fbb67ac35e19f4c9652f50f5..4c96985087eff256e1270bd88c033283a22b6e55 100644
+--- a/codex-rs/process-hardening/src/lib.rs
++++ b/codex-rs/process-hardening/src/lib.rs
+@@ -34,6 +34,7 @@ const PTRACE_DENY_ATTACH_FAILED_EXIT_CODE: i32 = 6;
+     target_os = "linux",
+     target_os = "android",
+     target_os = "macos",
++    target_os = "ios",
+     target_os = "freebsd",
+     target_os = "netbsd",
+     target_os = "openbsd"
