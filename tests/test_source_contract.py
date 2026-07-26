@@ -92,7 +92,12 @@ class SourceContractTest(unittest.TestCase):
         for key in shared_keys:
             self.assertNotIn(key, ios_specific_keys)
 
-        self.assertIn('target_os != "ios"', build_v8)
+        self.assertNotIn('target_os != "ios"', build_v8)
+        self.assertIn(
+            'let use_custom_libcxx =\n'
+            '    env::var("CARGO_FEATURE_USE_CUSTOM_LIBCXX").is_ok();',
+            build_v8,
+        )
         self.assertEqual(
             build_v8.count(
                 'gn_args.push(format!("use_custom_libcxx={use_custom_libcxx}"))'
