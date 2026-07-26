@@ -37,6 +37,11 @@ jobs:
             scripts/sign-ios.sh \
             scripts/verify-artifacts.sh
 
+      - name: Prepare pinned source fixtures
+        run: |
+          scripts/fetch-upstream.sh
+          scripts/apply-patches.sh
+
       - name: Run unit tests
         run: python3 -m unittest discover -s tests -v
 
