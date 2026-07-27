@@ -189,6 +189,19 @@ class SourceContractTest(unittest.TestCase):
         self.assertRegex(run, r"\bmacos_sdk_major\b")
         self.assertRegex(run, r'\[ "\$macos_sdk_major" -ge 15 \]')
 
+    def test_ios_build_workflow_uses_modern_libclang_for_v8_bindgen(self):
+        workflow = yaml.safe_load(
+            (ROOT / ".github/workflows/build-ios-v8-jit.yml").read_text()
+        )
+        job = workflow["jobs"]["build"]
+        self.assertEqual(job["env"]["LIBCLANG_PATH"], "/opt/homebrew/opt/llvm/lib")
+        install = next(
+            step
+            for step in job["steps"]
+            if step.get("name") == "Install artifact tools"
+        )
+        self.assertIn("llvm", install["run"].split())
+
     def test_ios_build_workflow_prepares_sources_before_unit_tests(self):
         workflow = yaml.safe_load(
             (ROOT / ".github/workflows/build-ios-v8-jit.yml").read_text()
