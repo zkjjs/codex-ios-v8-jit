@@ -67,3 +67,239 @@ index f500e15d41487337fbb67ac35e19f4c9652f50f5..4c96985087eff256e1270bd88c033283
      target_os = "freebsd",
      target_os = "netbsd",
      target_os = "openbsd"
+diff --git a/codex-rs/code-mode/src/remote_session/connection.rs b/codex-rs/code-mode/src/remote_session/connection.rs
+index 18ba5e0974..932b71e730 100644
+--- a/codex-rs/code-mode/src/remote_session/connection.rs
++++ b/codex-rs/code-mode/src/remote_session/connection.rs
+@@ -1,9 +1,11 @@
++use std::collections::VecDeque;
+ use std::fmt;
+ use std::io;
+ use std::path::Path;
+ use std::path::PathBuf;
+ use std::process::Stdio;
+ use std::sync::Arc;
++use std::sync::Mutex;
+ use std::sync::atomic::AtomicBool;
+ use std::sync::atomic::Ordering;
+ use std::time::Duration;
+@@ -48,6 +50,7 @@ mod reader;
+ 
+ const IPC_CHANNEL_CAPACITY: usize = 128;
+ const HOST_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
++const HOST_STDERR_TAIL_LINES: usize = 32;
+ 
+ pub(super) enum ConnectionError {
+     Spawn {
+@@ -104,6 +107,8 @@ struct ConnectionSupervisor {
+     driver_task: JoinHandle<()>,
+     reader_task: JoinHandle<Result<(), String>>,
+     writer_task: JoinHandle<Result<(), String>>,
++    stderr_task: Option<JoinHandle<()>>,
++    stderr_tail: Arc<Mutex<VecDeque<String>>>,
+ }
+ 
+ impl CallerCancellation {
+@@ -147,12 +152,25 @@ impl Connection {
+                 error,
+             })?;
+ 
+-        if let Some(stderr) = child.stderr.take() {
++        let stderr_tail = Arc::new(Mutex::new(VecDeque::with_capacity(
++            HOST_STDERR_TAIL_LINES,
++        )));
++        let stderr_task = child.stderr.take().map(|stderr| {
++            let stderr_tail = Arc::clone(&stderr_tail);
+             tokio::spawn(async move {
+                 let mut lines = BufReader::new(stderr).lines();
+                 loop {
+                     match lines.next_line().await {
+-                        Ok(Some(line)) => debug!("code-mode host stderr: {line}"),
++                        Ok(Some(line)) => {
++                            debug!("code-mode host stderr: {line}");
++                            let mut tail = stderr_tail
++                                .lock()
++                                .unwrap_or_else(std::sync::PoisonError::into_inner);
++                            if tail.len() == HOST_STDERR_TAIL_LINES {
++                                tail.pop_front();
++                            }
++                            tail.push_back(line);
++                        }
+                         Ok(None) => break,
+                         Err(err) => {
+                             warn!("failed to read code-mode host stderr: {err}");
+@@ -160,8 +178,8 @@ impl Connection {
+                         }
+                     }
+                 }
+-            });
+-        }
++            })
++        });
+ 
+         let stdin = child
+             .stdin
+@@ -271,6 +289,8 @@ impl Connection {
+                 driver_task,
+                 reader_task,
+                 writer_task,
++                stderr_task,
++                stderr_tail,
+             }
+             .run(),
+         );
+@@ -441,7 +461,18 @@ impl ConnectionSupervisor {
+             result = self.child.wait() => {
+                 child_exited = true;
+                 match result {
+-                    Ok(status) => format!("code-mode host exited with status {status}"),
++                    Ok(status) => {
++                        if let Some(stderr_task) = self.stderr_task.take() {
++                            let _ = stderr_task.await;
++                        }
++                        let stderr_tail = self.stderr_tail
++                            .lock()
++                            .unwrap_or_else(std::sync::PoisonError::into_inner)
++                            .iter()
++                            .cloned()
++                            .collect::<Vec<_>>();
++                        format_host_exit(&status.to_string(), &stderr_tail)
++                    }
+                     Err(err) => format!("failed waiting for code-mode host: {err}"),
+                 }
+             }
+@@ -455,6 +486,15 @@ impl ConnectionSupervisor {
+     }
+ }
+ 
++fn format_host_exit(status: &str, stderr_tail: &[String]) -> String {
++    let mut message = format!("code-mode host exited with status {status}");
++    if !stderr_tail.is_empty() {
++        message.push_str("\ncode-mode host stderr:\n");
++        message.push_str(&stderr_tail.join("\n"));
++    }
++    message
++}
++
+ fn task_failure(
+     task_name: &str,
+     result: Result<Result<(), String>, tokio::task::JoinError>,
+@@ -492,3 +532,27 @@ async fn kill_and_reap(child: &mut Child) {
+     let _ = child.start_kill();
+     let _ = child.wait().await;
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::format_host_exit;
++
++    #[test]
++    fn host_exit_includes_recent_stderr() {
++        let message = format_host_exit(
++            "signal: 5 (SIGTRAP)",
++            &[
++                "old diagnostic".to_string(),
++                "V8 fatal error at api.cc:123: resolver check failed".to_string(),
++            ],
++        );
++
++        assert_eq!(
++            message,
++            "code-mode host exited with status signal: 5 (SIGTRAP)\n\
++             code-mode host stderr:\n\
++             old diagnostic\n\
++             V8 fatal error at api.cc:123: resolver check failed"
++        );
++    }
++}
+diff --git a/codex-rs/code-mode/src/runtime/mod.rs b/codex-rs/code-mode/src/runtime/mod.rs
+index 0d32858724..9ef8f7db15 100644
+--- a/codex-rs/code-mode/src/runtime/mod.rs
++++ b/codex-rs/code-mode/src/runtime/mod.rs
+@@ -256,7 +256,9 @@ fn run_runtime(
+             RuntimeCommand::ObservePendingFrontier => {}
+         }
+ 
++        module_loader::trace_ios_runtime_phase("tool-response: microtask checkpoint");
+         scope.perform_microtask_checkpoint();
++        module_loader::trace_ios_runtime_phase("tool-response: microtask checkpoint complete");
+         match module_loader::completion_state(scope, pending_promise.as_ref()) {
+             CompletionState::Completed {
+                 stored_value_writes,
+diff --git a/codex-rs/code-mode/src/runtime/module_loader.rs b/codex-rs/code-mode/src/runtime/module_loader.rs
+index 00185edb58..250078c589 100644
+--- a/codex-rs/code-mode/src/runtime/module_loader.rs
++++ b/codex-rs/code-mode/src/runtime/module_loader.rs
+@@ -68,6 +68,7 @@ pub(super) fn resolve_tool_response(
+     id: &str,
+     response: Result<JsonValue, String>,
+ ) -> Result<(), String> {
++    trace_ios_runtime_phase("tool-response: lookup resolver");
+     let resolver = {
+         let state = scope
+             .get_slot_mut::<RuntimeState>()
+@@ -78,17 +79,23 @@ pub(super) fn resolve_tool_response(
+ 
+     let tc = std::pin::pin!(v8::TryCatch::new(scope));
+     let mut tc = tc.init();
++    trace_ios_runtime_phase("tool-response: reopen resolver");
+     let resolver = v8::Local::new(&tc, &resolver);
+     match response {
+         Ok(result) => {
++            trace_ios_runtime_phase("tool-response: convert JSON");
+             let value = json_to_v8(&mut tc, &result)
+                 .ok_or_else(|| "failed to serialize tool response".to_string())?;
++            trace_ios_runtime_phase("tool-response: resolve promise");
+             resolver.resolve(&tc, value);
++            trace_ios_runtime_phase("tool-response: promise resolved");
+         }
+         Err(error_text) => {
+             let value = v8::String::new(&tc, &error_text)
+                 .ok_or_else(|| "failed to allocate tool error".to_string())?;
++            trace_ios_runtime_phase("tool-response: reject promise");
+             resolver.reject(&tc, value.into());
++            trace_ios_runtime_phase("tool-response: promise rejected");
+         }
+     }
+     if tc.has_caught() {
+@@ -100,6 +107,15 @@ pub(super) fn resolve_tool_response(
+     Ok(())
+ }
+ 
++#[cfg(target_os = "ios")]
++#[allow(clippy::print_stderr)]
++pub(super) fn trace_ios_runtime_phase(phase: &str) {
++    eprintln!("code-mode iOS runtime: {phase}");
++}
++
++#[cfg(not(target_os = "ios"))]
++pub(super) fn trace_ios_runtime_phase(_phase: &str) {}
++
+ pub(super) fn completion_state(
+     scope: &mut v8::PinScope<'_, '_>,
+     pending_promise: Option<&v8::Global<v8::Promise>>,
+diff --git a/codex-rs/code-mode/src/v8_init.rs b/codex-rs/code-mode/src/v8_init.rs
+index 0d00d9fad5..d640d5093c 100644
+--- a/codex-rs/code-mode/src/v8_init.rs
++++ b/codex-rs/code-mode/src/v8_init.rs
+@@ -49,12 +49,20 @@ fn initialize_v8_with_mode(jit_mode: V8JitMode) -> Result<V8Initialization, Stri
+     let platform = v8::new_default_platform(0, false).make_shared();
+     v8::V8::initialize_platform(platform.clone());
+     v8::V8::initialize();
++    #[cfg(target_os = "ios")]
++    v8::V8::set_fatal_error_handler(report_v8_fatal_error);
+     Ok(V8Initialization {
+         _platform: platform,
+         jit_mode,
+     })
+ }
+ 
++#[cfg(target_os = "ios")]
++#[allow(clippy::print_stderr)]
++fn report_v8_fatal_error(file: &str, line: i32, message: &str) {
++    eprintln!("V8 fatal error at {file}:{line}: {message}");
++}
++
+ impl V8JitMode {
+     fn description(self) -> &'static str {
+         match self {
