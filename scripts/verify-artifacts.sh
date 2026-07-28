@@ -2,8 +2,7 @@
 set -eu
 
 root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-version="$(tr -d '\n' < "$root/UPSTREAM_CODEX_VERSION")"
-revision="${version}-5-jit"
+revision="$(awk '$1 == "Version:" { print $2; exit }' "$root/packaging/control")"
 package_name="codex-ios-roothide-${revision}"
 codex="$root/out/bin/codex"
 host="$root/out/bin/codex-code-mode-host"

@@ -41,6 +41,17 @@ class PackagingContractTest(unittest.TestCase):
             "codex-code-mode-host", (ROOT / "scripts/package.sh").read_text()
         )
 
+    def test_package_and_verifier_derive_revision_from_control(self):
+        expected = (
+            'revision="$(awk \'$1 == "Version:" { print $2; exit }\' '
+            '"$root/packaging/control")"'
+        )
+        for path in ("scripts/package.sh", "scripts/verify-artifacts.sh"):
+            with self.subTest(path=path):
+                script = (ROOT / path).read_text()
+                self.assertIn(expected, script)
+                self.assertNotRegex(script, r'revision="\$\{version\}-\d+-jit"')
+
     def test_package_script_selects_privilege_and_verifies_deb_ownership(self):
         package = (ROOT / "scripts/package.sh").read_text()
 
@@ -180,7 +191,6 @@ class PackagingContractTest(unittest.TestCase):
             calls = json.loads(log.read_text()) if log.exists() else []
             return completed, calls
 
-
     def run_launcher(self, prefix, inherited_ssl_cert_file):
         codex_bin = (
             prefix
@@ -207,6 +217,7 @@ class PackagingContractTest(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         return completed.stdout.strip()
+
 
 if __name__ == "__main__":
     unittest.main()

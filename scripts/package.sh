@@ -3,7 +3,7 @@ set -eu
 
 root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 version="$(tr -d '\n' < "$root/UPSTREAM_CODEX_VERSION")"
-revision="${version}-4-jit"
+revision="$(awk '$1 == "Version:" { print $2; exit }' "$root/packaging/control")"
 package_name="codex-ios-roothide-${revision}"
 out_dir="$root/out"
 deb="$out_dir/${package_name}.deb"

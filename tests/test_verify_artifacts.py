@@ -54,6 +54,7 @@ class ArtifactFixture:
     def __init__(self, directory: str):
         self.root = Path(directory)
         (self.root / "scripts").mkdir()
+        (self.root / "packaging").mkdir()
         (self.root / "out/bin").mkdir(parents=True)
         (self.root / "fake-bin").mkdir()
         source = ROOT / "scripts/verify-artifacts.sh"
@@ -62,6 +63,7 @@ class ArtifactFixture:
             shutil.copy2(source, destination)
         else:
             destination.write_text("#!/bin/sh\nexit 0\n")
+        shutil.copy2(ROOT / "packaging/control", self.root / "packaging/control")
 
         (self.root / "UPSTREAM_CODEX_VERSION").write_text("0.145.0\n")
         self.binaries = {
