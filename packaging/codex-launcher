@@ -21,7 +21,12 @@ export UV_THREADPOOL_SIZE="${UV_THREADPOOL_SIZE:-1}"
 
 mkdir -p "$HOME" "$CODEX_HOME"
 
-for cert in /etc/ssl/certs/cacert.pem /etc/ssl/cert.pem "${PREFIX}/etc/ssl/certs/cacert.pem"; do
+unset SSL_CERT_FILE
+for cert in \
+    "${PREFIX}/etc/ssl/certs/ca-certificates.crt" \
+    "${PREFIX}/etc/ssl/cert.pem" \
+    "${PREFIX}/etc/ssl/certs/cacert.pem"
+do
     if [ -f "$cert" ]; then
         export SSL_CERT_FILE="$cert"
         break
