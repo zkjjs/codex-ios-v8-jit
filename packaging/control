@@ -1,6 +1,6 @@
 Package: codex-ios-roothide
 Name: codex-ios-roothide
-Version: 0.145.0-4-jit
+Version: 0.145.0-5-jit
 Architecture: iphoneos-arm64e
 Section: Development
 Priority: optional
