@@ -12,9 +12,26 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PackagingContractTest(unittest.TestCase):
+    def test_launcher_prefers_roothide_ca_bundle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            prefix = Path(directory)
+            ca_bundle = prefix / "etc/ssl/certs/ca-certificates.crt"
+            ca_bundle.parent.mkdir(parents=True)
+            ca_bundle.touch()
+            output = self.run_launcher(prefix, "/etc/ssl/certs/cacert.pem")
+
+        self.assertEqual(output, str(ca_bundle))
+
+    def test_launcher_clears_stale_ssl_cert_file_without_roothide_ca_bundle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            prefix = Path(directory)
+            output = self.run_launcher(prefix, "/etc/ssl/certs/cacert.pem")
+
+        self.assertEqual(output, "UNSET")
+
     def test_roothide_jit_package_metadata_and_code_mode_host(self):
         control = (ROOT / "packaging/control").read_text()
-        self.assertIn("Version: 0.145.0-4-jit", control)
+        self.assertIn("Version: 0.145.0-5-jit", control)
         self.assertIn("Architecture: iphoneos-arm64e", control)
         self.assertIn("nodejs22-ios-roothide (>= 22.12.0)", control)
 
@@ -163,6 +180,33 @@ class PackagingContractTest(unittest.TestCase):
             calls = json.loads(log.read_text()) if log.exists() else []
             return completed, calls
 
+
+    def run_launcher(self, prefix, inherited_ssl_cert_file):
+        codex_bin = (
+            prefix
+            / "usr/local/lib/node_modules/@openai/codex"
+            / "vendor/aarch64-apple-ios/codex/codex"
+        )
+        codex_bin.parent.mkdir(parents=True)
+        codex_bin.write_text(
+            "#!/bin/sh\n"
+            "printf '%s\\n' \"${SSL_CERT_FILE:-UNSET}\"\n"
+        )
+        codex_bin.chmod(0o755)
+        environment = os.environ | {
+            "JB_ROOT": str(prefix),
+            "SSL_CERT_FILE": inherited_ssl_cert_file,
+        }
+        completed = subprocess.run(
+            ["sh", "packaging/codex-launcher"],
+            cwd=ROOT,
+            env=environment,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        return completed.stdout.strip()
 
 if __name__ == "__main__":
     unittest.main()
