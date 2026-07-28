@@ -95,8 +95,8 @@ jobs:
         with:
           name: ios-v8-jit-artifacts
           path: |
-            out/codex-ios-roothide-0.145.0-4-jit.deb
-            out/codex-ios-roothide-0.145.0-4-jit.zip
+            out/codex-ios-roothide-0.145.0-5-jit.deb
+            out/codex-ios-roothide-0.145.0-5-jit.zip
             out/SHA256SUMS
           if-no-files-found: error
 
