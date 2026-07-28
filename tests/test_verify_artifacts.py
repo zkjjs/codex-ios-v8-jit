@@ -14,7 +14,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.145.0-4-jit"
+VERSION = "0.145.0-5-jit"
 PACKAGE_NAME = f"codex-ios-roothide-{VERSION}"
 DEB_NAME = f"{PACKAGE_NAME}.deb"
 ZIP_NAME = f"{PACKAGE_NAME}.zip"
@@ -132,7 +132,7 @@ elif name == "dpkg-deb":
     if args[0] == "-f":
         fields = {
             "Package": "codex-ios-roothide",
-            "Version": os.environ.get("DEB_VERSION", "0.145.0-4-jit"),
+            "Version": os.environ.get("DEB_VERSION", "0.145.0-5-jit"),
             "Architecture": "iphoneos-arm64e",
         }
         print(fields[args[2]])
@@ -442,8 +442,8 @@ class VerificationWorkflowTest(unittest.TestCase):
         self.assertEqual(
             artifact_paths,
             [
-                "out/codex-ios-roothide-0.145.0-4-jit.deb",
-                "out/codex-ios-roothide-0.145.0-4-jit.zip",
+                "out/codex-ios-roothide-0.145.0-5-jit.deb",
+                "out/codex-ios-roothide-0.145.0-5-jit.zip",
                 "out/SHA256SUMS",
             ],
         )
