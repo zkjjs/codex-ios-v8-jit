@@ -22,8 +22,7 @@ index 17edbbfb2f1aabddde9dbd5a3192907f77f8369a..5c84b04ffd766b4df2ee410ebe10a001
  split-debuginfo = "off"
  # Keep release binaries symbolicateable until packaging has archived the
  # sidecar symbols and stripped the binaries.
--strip = false
-+strip = "symbols"
+ strip = false
  
  # Balance parallel release code generation against binary size.
 -codegen-units = 4

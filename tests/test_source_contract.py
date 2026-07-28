@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import re
+import tomllib
 import unittest
 import yaml
 
@@ -46,6 +47,12 @@ class SourceContractTest(unittest.TestCase):
     def test_v8_patch_override_is_exact(self):
         cargo = (ROOT / "work/codex/codex-rs/Cargo.toml").read_text()
         self.assertIn('v8 = { path = "../../rusty_v8" }', cargo)
+
+    def test_release_profile_keeps_symbols_for_v8_verification(self):
+        cargo = tomllib.loads(
+            (ROOT / "work/codex/codex-rs/Cargo.toml").read_text()
+        )
+        self.assertIs(cargo["profile"]["release"]["strip"], False)
 
     def test_rusty_v8_ios_configuration(self):
         build = (ROOT / "work/rusty_v8/build.rs").read_text()
