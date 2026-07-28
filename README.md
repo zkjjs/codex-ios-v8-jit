@@ -6,7 +6,7 @@ Max running iOS 16.0.2 with Dopamine roothide.
 | Item | Value |
 | --- | --- |
 | Codex | `0.145.0` |
-| JIT package | `codex-ios-roothide-0.145.0-4-jit.deb` |
+| JIT package | `codex-ios-roothide-0.145.0-5-jit.deb` |
 | Rollback input | immutable `codex-ios-roothide-0.145.0-3.zip` |
 | Device target | iPhone 13 Pro Max, iOS 16.0.2, Dopamine roothide |
 
