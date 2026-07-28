@@ -7,7 +7,7 @@ verify that V8 JIT executed on the phone.
 
 ## Prepare and install
 
-Transfer the verified `codex-ios-roothide-0.145.0-4-jit.deb` and the immutable
+Transfer the verified `codex-ios-roothide-0.145.0-5-jit.deb` and the immutable
 `codex-ios-roothide-0.145.0-3.zip` to the device. Set their actual, explicit
 paths below; do not overwrite either source artifact.
 
@@ -17,7 +17,7 @@ set -eu
 JBROOT="${JB_ROOT:-$(ls -d /var/containers/Bundle/Application/.jbroot-* 2>/dev/null | head -n 1)}"
 test -n "$JBROOT" && test -d "$JBROOT"
 
-JIT_DEB="/absolute/path/codex-ios-roothide-0.145.0-4-jit.deb"
+JIT_DEB="/absolute/path/codex-ios-roothide-0.145.0-5-jit.deb"
 ROLLBACK_ZIP="/absolute/path/codex-ios-roothide-0.145.0-3.zip"
 test -f "$JIT_DEB"
 test -f "$ROLLBACK_ZIP"
@@ -44,7 +44,7 @@ codex --version
 ```
 
 Record both outputs. `codex --version` must report `0.145.0`; `dpkg-query`
-must report the installed package revision `0.145.0-4-jit`. If the terminal
+must report the installed package revision `0.145.0-5-jit`. If the terminal
 has no `sudo`, run the same `apt` command from its root shell; do not use a
 remove/purge command.
 
