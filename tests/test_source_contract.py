@@ -68,6 +68,7 @@ class SourceContractTest(unittest.TestCase):
             'v8_enable_maglev=true',
             'v8_enable_sandbox=false',
             'v8_enable_pointer_compression=false',
+            'cppgc_enable_caged_heap=false',
             'v8_enable_webassembly=false',
         ]
         for item in required:
@@ -93,6 +94,7 @@ class SourceContractTest(unittest.TestCase):
             "use_custom_libcxx",
             "v8_enable_sandbox",
             "v8_enable_pointer_compression",
+            "cppgc_enable_caged_heap",
             "treat_warnings_as_errors",
         ]
 
@@ -116,6 +118,9 @@ class SourceContractTest(unittest.TestCase):
         self.assertEqual(ios_extra_args.count('"v8_enable_sandbox=false"'), 1)
         self.assertEqual(
             ios_extra_args.count('"v8_enable_pointer_compression=false"'), 1
+        )
+        self.assertEqual(
+            ios_extra_args.count('"cppgc_enable_caged_heap=false"'), 1
         )
         aarch64 = rust_block(build_v8, 'if target_arch == "aarch64"')
         self.assertEqual(aarch64.count('target_cpu="arm64"'), 1)
@@ -148,6 +153,7 @@ class SourceContractTest(unittest.TestCase):
                 "v8_enable_maglev",
                 "v8_enable_sandbox",
                 "v8_enable_pointer_compression",
+                "cppgc_enable_caged_heap",
                 "v8_enable_webassembly",
                 "treat_warnings_as_errors",
             },
