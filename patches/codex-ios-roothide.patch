@@ -87,7 +87,7 @@ index 18ba5e0974..c954375846 100644
  
  const IPC_CHANNEL_CAPACITY: usize = 128;
  const HOST_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
-+const HOST_STDERR_TAIL_LINES: usize = 32;
++const HOST_STDERR_TAIL_LINES: usize = 256;
  
  pub(super) enum ConnectionError {
      Spawn {
