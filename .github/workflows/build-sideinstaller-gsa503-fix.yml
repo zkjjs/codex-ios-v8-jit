@@ -26,45 +26,21 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-
           p = Path("rust-core/vendor/isideload/src/anisette/remote_v3/mod.rs")
           s = p.read_text()
-
           old1 = "                let resp = self\n                    .client\n                    .get(format!(\"{}/v3/client_info\", self.url))"
           new1 = "                let mut resp = self\n                    .client\n                    .get(format!(\"{}/v3/client_info\", self.url))"
           if old1 not in s:
               raise SystemExit("Could not locate v0.9.0 client_info request")
           s = s.replace(old1, new1, 1)
-
-          old2 = """                    .json::<AnisetteClientInfo>()
-                    .await?;
-
-                self.client_info = Some(resp.clone());
-"""
-          new2 = """                    .json::<AnisetteClientInfo>()
-                    .await?;
-
-                // Apple GSA started rejecting X-Mme-Client-Info values that
-                // identify Xcode. Keep the server-provided device metadata,
-                // but rewrite only the blocked client token to AuthKit's akd.
-                if let Some(start) = resp.client_info.find("(com.apple.dt.Xcode/") {
-                    if let Some(rel_end) = resp.client_info[start..].find(')') {
-                        let end = start + rel_end + 1;
-                        resp.client_info
-                            .replace_range(start..end, "(com.apple.akd/1.0)");
-                    }
-                }
-
-                self.client_info = Some(resp.clone());
-"""
-          if old2 not in s:
-              raise SystemExit("Could not locate v0.9.0 client_info response block")
-          s = s.replace(old2, new2, 1)
-
+          marker = "                self.client_info = Some(resp.clone());"
+          patch = "                // Apple GSA rejects X-Mme-Client-Info values identifying Xcode.\n                // Preserve server metadata, but normalize the blocked client token.\n                if let Some(start) = resp.client_info.find(\"(com.apple.dt.Xcode/\") {\n                    if let Some(rel_end) = resp.client_info[start..].find(')') {\n                        let end = start + rel_end + 1;\n                        resp.client_info.replace_range(start..end, \"(com.apple.akd/1.0)\");\n                    }\n                }\n\n"
+          if marker not in s:
+              raise SystemExit("Could not locate v0.9.0 client_info assignment")
+          s = s.replace(marker, patch + marker, 1)
           p.write_text(s)
           print("Patched:", p)
           PY
-
           grep -n -A10 -B3 "com.apple.akd" rust-core/vendor/isideload/src/anisette/remote_v3/mod.rs
 
       - name: Show toolchain
@@ -106,10 +82,8 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" \
             build
-
           APP="build/DerivedData/Build/Products/Release-iphoneos/SideInstaller.app"
           test -d "$APP"
-
           rm -rf Payload
           mkdir -p Payload
           cp -R "$APP" Payload/SideInstaller.app
