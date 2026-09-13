@@ -50,35 +50,14 @@ jobs:
           from pathlib import Path
           p = Path("ios-app/CertManager.swift")
           s = p.read_text()
-
-          needle = '''                if Engine.isCredentialError(lastError) {
-                    engine.log("Apple ID credentials rejected: \(lastError)")
-                    throw EngineError.message(Engine.credentialErrorMessage)
-                }
-                engine.log("Certificates: anisette \(idx + 1)/\(servers.count) failed: \(lastError)")
-'''
-          replacement = '''                if Engine.isCredentialError(lastError) {
-                    engine.log("Apple ID credentials rejected: \(lastError)")
-                    throw EngineError.message(Engine.credentialErrorMessage)
-                }
-                // A GrandSlam 429 is Apple's rate limiter, not an anisette-server
-                // failure. Rotating through every server only repeats the same
-                // Apple-ID login and can extend the cooldown.
-                if lastError.localizedCaseInsensitiveContains("429") ||
-                   lastError.localizedCaseInsensitiveContains("Too Many Requests") {
-                    engine.log("Apple rate limit hit (HTTP 429) — stopping anisette rotation.")
-                    throw EngineError.message(
-                        L("Apple is temporarily rate-limiting sign-in (HTTP 429). SideInstaller stopped automatic retries. Wait a while, then try once.")
-                    )
-                }
-                engine.log("Certificates: anisette \(idx + 1)/\(servers.count) failed: \(lastError)")
-'''
-          if needle not in s:
-              raise SystemExit("Could not locate CertManager retry block")
-          p.write_text(s.replace(needle, replacement, 1))
+          marker = '                engine.log("Certificates: anisette \\(idx + 1)/\\(servers.count) failed: \\(lastError)")'
+          patch = '                if lastError.localizedCaseInsensitiveContains("429") ||\\n                   lastError.localizedCaseInsensitiveContains("Too Many Requests") {\\n                    engine.log("Apple rate limit hit (HTTP 429) — stopping anisette rotation.")\\n                    throw EngineError.message(L("Apple is temporarily rate-limiting sign-in (HTTP 429). SideInstaller stopped automatic retries. Wait a while, then try once."))\\n                }\\n'
+          if marker not in s:
+              raise SystemExit("Could not locate CertManager retry log")
+          p.write_text(s.replace(marker, patch + marker, 1))
           print("Patched:", p)
           PY
-          grep -n -A14 -B4 "Apple rate limit hit" ios-app/CertManager.swift
+          grep -n -A9 -B3 "Apple rate limit hit" ios-app/CertManager.swift
 
       - name: Show toolchain
         shell: bash
