@@ -30,52 +30,42 @@ jobs:
           p = Path("rust-core/vendor/isideload/src/anisette/remote_v3/mod.rs")
           s = p.read_text()
 
-          old = '''                let resp = self
-                      .client
-                      .get(format!("{}/v3/client_info", self.url))
-                      .send()
-                      .await?
-                      .error_for_status()?
-                      .json::<AnisetteClientInfo>()
-                      .await?;
+          old1 = "                let resp = self\n                    .client\n                    .get(format!(\"{}/v3/client_info\", self.url))"
+          new1 = "                let mut resp = self\n                    .client\n                    .get(format!(\"{}/v3/client_info\", self.url))"
+          if old1 not in s:
+              raise SystemExit("Could not locate v0.9.0 client_info request")
+          s = s.replace(old1, new1, 1)
 
-                  self.client_info = Some(resp.clone());
-                  Ok(resp)
-          '''
+          old2 = """                    .json::<AnisetteClientInfo>()
+                    .await?;
 
-          new = '''                let mut resp = self
-                      .client
-                      .get(format!("{}/v3/client_info", self.url))
-                      .send()
-                      .await?
-                      .error_for_status()?
-                      .json::<AnisetteClientInfo>()
-                      .await?;
+                self.client_info = Some(resp.clone());
+"""
+          new2 = """                    .json::<AnisetteClientInfo>()
+                    .await?;
 
-                  // Since September 2026 Apple's GSA edge rejects
-                  // X-Mme-Client-Info values containing com.apple.dt.Xcode
-                  // with HTTP 503. Preserve the anisette server's device
-                  // metadata, but report AuthKit as akd instead of Xcode.
-                  if let Some(start) = resp.client_info.find("(com.apple.dt.Xcode/") {
-                      if let Some(rel_end) = resp.client_info[start..].find(')') {
-                          let end = start + rel_end + 1;
-                          resp.client_info
-                              .replace_range(start..end, "(com.apple.akd/1.0)");
-                      }
-                  }
+                // Apple GSA started rejecting X-Mme-Client-Info values that
+                // identify Xcode. Keep the server-provided device metadata,
+                // but rewrite only the blocked client token to AuthKit's akd.
+                if let Some(start) = resp.client_info.find("(com.apple.dt.Xcode/") {
+                    if let Some(rel_end) = resp.client_info[start..].find(')') {
+                        let end = start + rel_end + 1;
+                        resp.client_info
+                            .replace_range(start..end, "(com.apple.akd/1.0)");
+                    }
+                }
 
-                  self.client_info = Some(resp.clone());
-                  Ok(resp)
-          '''
+                self.client_info = Some(resp.clone());
+"""
+          if old2 not in s:
+              raise SystemExit("Could not locate v0.9.0 client_info response block")
+          s = s.replace(old2, new2, 1)
 
-          if old not in s:
-              raise SystemExit("Expected SideInstaller v0.9.0 get_client_info block not found; refusing to build an unverified patch.")
-
-          p.write_text(s.replace(old, new, 1))
+          p.write_text(s)
           print("Patched:", p)
           PY
 
-          grep -n "com.apple.akd" rust-core/vendor/isideload/src/anisette/remote_v3/mod.rs
+          grep -n -A10 -B3 "com.apple.akd" rust-core/vendor/isideload/src/anisette/remote_v3/mod.rs
 
       - name: Show toolchain
         shell: bash
@@ -105,7 +95,17 @@ jobs:
         shell: bash
         run: |
           rm -rf build
-          xcodebuild             -project SideInstaller.xcodeproj             -scheme SideInstaller             -configuration Release             -sdk iphoneos             -derivedDataPath build/DerivedData             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             CODE_SIGN_IDENTITY=""             DEVELOPMENT_TEAM=""             build
+          xcodebuild \
+            -project SideInstaller.xcodeproj \
+            -scheme SideInstaller \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            build
 
           APP="build/DerivedData/Build/Products/Release-iphoneos/SideInstaller.app"
           test -d "$APP"
@@ -114,7 +114,6 @@ jobs:
           mkdir -p Payload
           cp -R "$APP" Payload/SideInstaller.app
           /usr/bin/zip -qry SideInstaller-0.9.0-GSA503-Fixed-unsigned.ipa Payload
-
           shasum -a 256 SideInstaller-0.9.0-GSA503-Fixed-unsigned.ipa
 
       - name: Upload patched IPA
