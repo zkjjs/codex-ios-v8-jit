@@ -22,7 +22,7 @@ index a2a2e45..c94aa88 100644
 +      "arm64-apple-ios16.0".to_string(),
 +    ]);
    } else if target_os == "linux" {
-@@ -273,12 +290,16 @@ fn build_v8(is_asan: bool) {
+@@ -273,12 +290,17 @@ fn build_v8(is_asan: bool) {
    if is_asan {
      gn_args.push("is_asan=true".to_string());
    }
@@ -41,6 +41,7 @@ index a2a2e45..c94aa88 100644
 +      vec![
 +        "v8_enable_sandbox=false",
 +        "v8_enable_pointer_compression=false",
++        "cppgc_enable_caged_heap=false",
 +      ]
 +    } else if env::var("CARGO_FEATURE_V8_ENABLE_SANDBOX").is_ok() {
        vec![
