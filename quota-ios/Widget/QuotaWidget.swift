@@ -153,7 +153,7 @@ struct QuotaWidgetView: View {
     private func resetLine(_ window: QuotaWindow) -> some View {
         HStack(spacing: 3) {
             Image(systemName: "arrow.clockwise")
-            if let reset = window.resetDate, reset > entry.date {
+            if let reset = window.resetDate, !window.awaitingReset(at: entry.date) {
                 Text(timerInterval: entry.date...reset, countsDown: true).monospacedDigit()
             } else {
                 Text(window.resetDate == nil ? "重置时间未知" : "等待额度更新")

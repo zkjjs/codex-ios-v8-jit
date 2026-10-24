@@ -149,7 +149,7 @@ private struct QuotaCard: View {
                     HStack {
                         Text("距离重置").foregroundStyle(.secondary)
                         Spacer()
-                        if let reset = window.resetDate, reset > context.date {
+                        if let reset = window.resetDate, !window.awaitingReset(at: context.date) {
                             Text(timerInterval: context.date...reset, countsDown: true)
                                 .monospacedDigit().fixedSize()
                         } else {

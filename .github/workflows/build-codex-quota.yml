@@ -77,17 +77,27 @@ jobs:
           xcodebuild -project quota-ios/CodexQuota.xcodeproj -scheme CodexQuota \
             -destination "platform=iOS Simulator,id=$simulator_id" \
             -derivedDataPath quota-ios/build-simulator -resultBundlePath quota-ios/out/Tests.xcresult \
-            CODE_SIGNING_ALLOWED=NO test 2>&1 | tee quota-ios/out/tests.log
+            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO test 2>&1 | tee quota-ios/out/tests.log
+      - name: Package unsigned IPA
+        run: bash quota-ios/scripts/package-ipa.sh quota-ios/build-device/Build/Products/Release-iphoneos/CodexQuota.app quota-ios/out
       - name: Capture simulator launch
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          import json, os, subprocess
+          simulator = os.environ['QUOTA_SIMULATOR_ID']
+          devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', '-j']))['devices']
+          device = next(d for group in devices.values() for d in group if d['udid'] == simulator)
+          if device['state'] != 'Booted':
+              subprocess.run(['xcrun', 'simctl', 'boot', simulator], check=True)
+          subprocess.run(['xcrun', 'simctl', 'bootstatus', simulator, '-b'], check=True)
+          PY
           xcrun simctl install "$QUOTA_SIMULATOR_ID" quota-ios/build-simulator/Build/Products/Debug-iphonesimulator/CodexQuota.app
           xcrun simctl launch "$QUOTA_SIMULATOR_ID" com.zkjjs.codexquota
           sleep 3
           xcrun simctl io "$QUOTA_SIMULATOR_ID" screenshot quota-ios/out/Launch.png
-      - name: Package unsigned IPA
-        run: bash quota-ios/scripts/package-ipa.sh quota-ios/build-device/Build/Products/Release-iphoneos/CodexQuota.app quota-ios/out
       - uses: actions/upload-artifact@v4
         with:
           name: CodexQuota-unsigned-IPA
