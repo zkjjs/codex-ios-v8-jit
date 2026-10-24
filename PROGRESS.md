@@ -17,3 +17,5 @@ Visual QA: first full build 40119469329 succeeded (device+simulator), login and 
 
 Server-mode change approved by user: use Japanese Ubuntu server 52.195.185.75. Direct SSH from this environment fails before authentication (Network is unreachable). User independently verified actual deviceauth/usercode endpoint responds HTTP 200 JSON on Japanese server. Implement single-owner HTTPS bridge + installer and native pairing; keep deployment status pending until user executes installer.
 Server test RED: missing bridge.py observed before implementation; initial ten tests GREEN, added logout-during-throttle regression. Transport test uses a real local Python HTTPS server and self-signed certificate to verify Swift certificate pin handling.
+
+Independent server review: one P2 logout/widget race identified. Replaced reuse of session UUID with new persisted/shared profile identity after logout or server login_required, so pre-logout widget completions are rejected by existing reducer. Added transport profile rotation test; no other material security finding.

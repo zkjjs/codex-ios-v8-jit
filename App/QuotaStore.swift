@@ -99,7 +99,7 @@ final class QuotaStore {
             guard generation == attempt else { return }
             if let service = error as? ServiceError, service.status == 409 {
                 isSignedIn = false; snapshot = nil; message = "服务器已连接，请登录 ChatGPT 账号。"
-                try? cache.clear(); try? cache.begin(sessionID:profile.sessionID)
+                rotateSession(profile)
             } else {
                 message = error.localizedDescription
                 retryAt = (error as? ServiceError)?.retryAt
@@ -113,6 +113,20 @@ final class QuotaStore {
         do { try cache.update { $0.privacyHidden = hidden } } catch { sharingWarning = error.localizedDescription }
         WidgetCenter.shared.reloadAllTimelines()
     }
+    private func rotateSession(_ previous: ServerProfile) {
+        let current = previous.rotated()
+        serverProfile = current
+        do {
+            // New UUID atomically invalidates completions from pre-logout widget requests.
+            try cache.begin(sessionID:current.sessionID)
+            try SecureStore.save(current,key:"server-profile")
+            try SecureStore.save(current,key:"server-profile",shared:true)
+        } catch {
+            // Preserve the private profile even if this signature cannot share widget data.
+            try? SecureStore.save(current,key:"server-profile")
+            sharingWarning = "账号状态已更新，小组件同步不可用：\(error.localizedDescription)"
+        }
+    }
     func logout() async {
         guard let profile = serverProfile else { return }
         cancelLogin(); isRefreshing = false
@@ -121,7 +135,7 @@ final class QuotaStore {
             _ = try await BridgeClient(profile:profile).request("v1/logout",method:"POST",body:[:])
             guard attempt == generation else { return }
             isSignedIn = false; snapshot = nil; retryAt = nil; message = nil
-            try cache.clear(); try cache.begin(sessionID:profile.sessionID)
+            rotateSession(profile)
             WidgetCenter.shared.reloadAllTimelines()
         } catch { message = "退出未完成：\(error.localizedDescription)" }
     }
