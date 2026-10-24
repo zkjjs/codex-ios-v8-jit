@@ -21,7 +21,7 @@ final class TransportTests: XCTestCase {
         let der = directory.appendingPathComponent("server.der")
         func run(_ arguments: [String]) throws {
             let process=Process(); process.executableURL=URL(fileURLWithPath:"/usr/bin/env"); process.arguments=arguments
-            process.standardOutput=FileHandle.nullDevice; process.standardError=FileHandle.nullDevice
+            process.standardOutput=FileHandle.standardOutput; process.standardError=FileHandle.standardError
             try process.run(); process.waitUntilExit(); XCTAssertEqual(process.terminationStatus,0)
         }
         try run(["openssl","req","-x509","-newkey","rsa:2048","-nodes","-days","1","-keyout",key,"-out",cert,"-subj","/CN=127.0.0.1","-addext","subjectAltName=IP:127.0.0.1"])
@@ -30,10 +30,12 @@ final class TransportTests: XCTestCase {
         let server=Process(); server.executableURL=URL(fileURLWithPath:"/usr/bin/env")
         server.arguments=["python3","Server/bridge.py","--directory",directory.appendingPathComponent("state").path,"--cert",cert,"--key",key,"--port","18865"]
         server.environment=ProcessInfo.processInfo.environment.merging(["CODEX_QUOTA_KEY":String(repeating:"k",count:48)]) { _,new in new }
-        server.standardOutput=FileHandle.nullDevice; server.standardError=FileHandle.nullDevice
+        server.standardOutput=FileHandle.standardOutput; server.standardError=FileHandle.standardError
         try server.run(); defer { server.terminate(); server.waitUntilExit() }
         try await Task.sleep(for:.seconds(1))
         XCTAssertTrue(server.isRunning, "Python gateway must be alive")
+        try run(["python3", "-c", "import socket; s=socket.create_connection(('127.0.0.1',18865),timeout=2); print('TCP localhost connected'); s.close()"])
+
         try run(["python3", "-c", "import urllib.request,ssl; r=urllib.request.build_opener(urllib.request.ProxyHandler({}),urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=" + String(reflecting:cert) + "))).open('https://127.0.0.1:18865/health',timeout=4); print(r.status)"])
         print("Python HTTPS probe completed")
         func profile(_ gatewayKey:String,_ certificate:String) throws -> ServerProfile {
