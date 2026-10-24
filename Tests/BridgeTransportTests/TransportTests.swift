@@ -24,7 +24,7 @@ final class TransportTests: XCTestCase {
             process.standardOutput=FileHandle.standardOutput; process.standardError=FileHandle.standardError
             try process.run(); process.waitUntilExit(); XCTAssertEqual(process.terminationStatus,0)
         }
-        try run(["openssl","req","-x509","-newkey","rsa:2048","-nodes","-days","1","-keyout",key,"-out",cert,"-subj","/CN=127.0.0.1","-addext","subjectAltName=IP:127.0.0.1"])
+        try run(["openssl","req","-x509","-newkey","rsa:2048","-nodes","-days","1","-keyout",key,"-out",cert,"-subj","/CN=127.0.0.1","-addext","subjectAltName=IP:127.0.0.1","-addext","extendedKeyUsage=serverAuth","-addext","keyUsage=critical,digitalSignature,keyEncipherment","-addext","basicConstraints=critical,CA:FALSE"])
         try run(["openssl","x509","-in",cert,"-outform","DER","-out",der.path])
         let pin=SHA256.hash(data:try Data(contentsOf:der)).map { String(format:"%02x",$0) }.joined()
         let server=Process(); server.executableURL=URL(fileURLWithPath:"/usr/bin/env")
