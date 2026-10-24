@@ -73,10 +73,19 @@ jobs:
           raise SystemExit('No iPhone simulator is installed')
           PY
           )"
+          echo "QUOTA_SIMULATOR_ID=$simulator_id" >> "$GITHUB_ENV"
           xcodebuild -project quota-ios/CodexQuota.xcodeproj -scheme CodexQuota \
             -destination "platform=iOS Simulator,id=$simulator_id" \
             -derivedDataPath quota-ios/build-simulator -resultBundlePath quota-ios/out/Tests.xcresult \
             CODE_SIGNING_ALLOWED=NO test 2>&1 | tee quota-ios/out/tests.log
+      - name: Capture simulator launch
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun simctl install "$QUOTA_SIMULATOR_ID" quota-ios/build-simulator/Build/Products/Debug-iphonesimulator/CodexQuota.app
+          xcrun simctl launch "$QUOTA_SIMULATOR_ID" com.zkjjs.codexquota
+          sleep 3
+          xcrun simctl io "$QUOTA_SIMULATOR_ID" screenshot quota-ios/out/Launch.png
       - name: Package unsigned IPA
         run: bash quota-ios/scripts/package-ipa.sh quota-ios/build-device/Build/Products/Release-iphoneos/CodexQuota.app quota-ios/out
       - uses: actions/upload-artifact@v4
@@ -93,4 +102,5 @@ jobs:
           path: |
             quota-ios/out/*.log
             quota-ios/out/*.xcresult
+            quota-ios/out/*.png
           if-no-files-found: ignore

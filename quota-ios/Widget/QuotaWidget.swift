@@ -26,13 +26,7 @@ enum WidgetLoader {
 
     static func timeline(_ entry: QuotaEntry) -> Timeline<QuotaEntry> {
         let refresh = entry.date.addingTimeInterval(900)
-        var dates = [entry.date]
-        if let snapshot = entry.snapshot {
-            dates += snapshot.windows.compactMap(\.resetDate)
-                .map { $0.addingTimeInterval(1) }.filter { $0 > entry.date && $0 < refresh }
-            let staleAt = snapshot.updatedDate.addingTimeInterval(901)
-            if staleAt > entry.date && staleAt < refresh { dates.append(staleAt) }
-        }
+        let dates = QuotaSchedule.dates(snapshot: entry.snapshot, now: entry.date)
         let entries = dates.sorted().map { QuotaEntry(date: $0, snapshot: entry.snapshot, message: entry.message) }
         return Timeline(entries: entries, policy: .after(refresh))
     }
@@ -158,7 +152,7 @@ struct QuotaWidgetView: View {
 
     private func resetLine(_ window: QuotaWindow) -> some View {
         HStack(spacing: 3) {
-            Image(systemName: "arrow.trianglehead.clockwise")
+            Image(systemName: "arrow.clockwise")
             if let reset = window.resetDate, reset > entry.date {
                 Text(timerInterval: entry.date...reset, countsDown: true).monospacedDigit()
             } else {
@@ -171,6 +165,8 @@ struct QuotaWidgetView: View {
 @available(iOS 17.0, *)
 struct ConfigurableQuotaWidget: Widget {
     let dark: Bool
+    init() { dark = true }
+    init(dark: Bool) { self.dark = dark }
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: dark ? "CodexQuotaBlack" : "CodexQuotaWhite", intent: QuotaConfiguration.self,
                                provider: ConfigurableProvider()) { entry in
@@ -184,6 +180,8 @@ struct ConfigurableQuotaWidget: Widget {
 
 struct LegacyQuotaWidget: Widget {
     let dark: Bool
+    init() { dark = true }
+    init(dark: Bool) { self.dark = dark }
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: dark ? "CodexQuotaBlack" : "CodexQuotaWhite", provider: LegacyProvider()) { entry in
             QuotaWidgetView(entry: entry, dark: dark)
@@ -196,13 +194,15 @@ struct LegacyQuotaWidget: Widget {
 
 @main
 struct CodexQuotaWidgets: WidgetBundle {
-    var body: some Widget {
+    var body: some Widget { compatibleWidgets() }
+
+    private func compatibleWidgets() -> some Widget {
         if #available(iOS 17.0, *) {
-            ConfigurableQuotaWidget(dark: true)
-            ConfigurableQuotaWidget(dark: false)
+            return WidgetBundleBuilder.buildBlock(
+                ConfigurableQuotaWidget(dark: true), ConfigurableQuotaWidget(dark: false))
         } else {
-            LegacyQuotaWidget(dark: true)
-            LegacyQuotaWidget(dark: false)
+            return WidgetBundleBuilder.buildBlock(
+                LegacyQuotaWidget(dark: true), LegacyQuotaWidget(dark: false))
         }
     }
 }
