@@ -85,8 +85,12 @@ struct DashboardView: View {
             Image(systemName: "terminal").font(.system(size: 38, weight: .light)).foregroundStyle(Color.quotaMint)
                 .padding(.top, 8)
             Text("连接你的 Codex").font(.title2.bold())
-            Text("使用 ChatGPT 账号授权，即可查看剩余额度、重置时间和桌面小组件。")
+            Text("通过你的日本服务器连接 ChatGPT，查看剩余额度、重置时间和桌面小组件。")
                 .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            NavigationLink { ServerPairingView(store:store) } label: {
+                Label(store.serverProfile == nil ? "先连接日本服务器" : "服务器：\(store.serverProfile?.serverURL.host ?? "")", systemImage:"server.rack")
+                    .font(.subheadline).frame(maxWidth:.infinity)
+            }.buttonStyle(.glass).controlSize(.large)
             if let code = store.deviceCode {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("你的登录授权码").font(.caption).foregroundStyle(.secondary)
@@ -113,7 +117,7 @@ struct DashboardView: View {
                             Image(systemName: "arrow.right")
                         }.frame(maxWidth: .infinity)
                     }.buttonStyle(.glassProminent).controlSize(.large)
-                        .disabled(store.isLoggingIn || coolingDown)
+                        .disabled(store.isLoggingIn || coolingDown || store.serverProfile == nil)
                 }
             }
             Label("密码仅在 OpenAI 官方网页输入", systemImage: "lock.shield")

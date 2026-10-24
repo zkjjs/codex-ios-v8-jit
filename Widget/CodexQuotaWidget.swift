@@ -40,19 +40,15 @@ struct QuotaProvider: TimelineProvider {
         if let snapshot = state.snapshot, Date().timeIntervalSince(snapshot.fetchedAt) < 60,
            !snapshot.windows.contains(where: { $0.needsResetRefresh(at: Date()) }) { return }
         do {
-            guard let grant: WidgetGrant = try SecureStore.read("widget-grant", shared: true), grant.sessionID == id else {
-                try? cache.failure("请打开应用同步登录", retryAt: nil, sessionID: id)
+            guard let profile: ServerProfile = try SecureStore.read("server-profile", shared: true), profile.sessionID == id else {
+                try? cache.failure("请打开应用配对服务器", retryAt:nil, sessionID:id)
                 return
             }
-            guard grant.expiresAt.timeIntervalSinceNow > 60 else {
-                try? cache.failure("请打开应用续期登录", retryAt: nil, sessionID: id)
-                return
-            }
-            let fresh = try await HTTPClient.shared.usage(accessToken: grant.accessToken, accountID: grant.accountID)
+            let fresh = try await BridgeClient(profile:profile).usage()
             try cache.write(fresh, sessionID: id)
         } catch {
             let service = error as? ServiceError
-            let message = service?.status == 401 ? "请打开应用重新登录" : "暂未同步 · 显示上次数据"
+            let message = service?.status == 409 ? "请打开应用登录服务器账号" : "暂未同步 · 显示上次数据"
             let retry = service?.retryAt ?? Date().addingTimeInterval(300)
             try? cache.failure(message, retryAt: retry, sessionID: id)
         }

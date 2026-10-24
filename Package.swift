@@ -6,6 +6,8 @@ let package = Package(
     products: [.library(name: "QuotaCore", targets: ["QuotaCore"])],
     targets: [
         .target(name: "QuotaCore"),
-        .testTarget(name: "QuotaCoreTests", dependencies: ["QuotaCore"])
+        .target(name: "BridgeTransport",dependencies:["QuotaCore"],path:"Shared",exclude:["QuotaViews.swift","SecureStore.swift","SnapshotStore.swift"],sources:["BridgeClient.swift","HTTPClient.swift"]),
+        .testTarget(name: "QuotaCoreTests", dependencies: ["QuotaCore"]),
+        .testTarget(name: "BridgeTransportTests",dependencies:["BridgeTransport"])
     ]
 )

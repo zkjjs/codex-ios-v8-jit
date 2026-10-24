@@ -14,3 +14,6 @@ Review: independently reviewed by ios_review. Accepted 3 important fixes: preser
 Review regression RED: run 40119653388 fails for missing SharedState reducer, SigningGroups resolver and timelineBoundaries. Implemented all four regressions and wired shared reducer into app/widget flow.
 
 Visual QA: first full build 40119469329 succeeded (device+simulator), login and dashboard screenshots inspected. Found unsupported chart.donut tab symbol; replaced with chart.pie.fill. Future build retains device+simulator compilation but skips repeating the same simulator boot capture; UI capture remains available via CAPTURE_UI=1.
+
+Server-mode change approved by user: use Japanese Ubuntu server 52.195.185.75. Direct SSH from this environment fails before authentication (Network is unreachable). User independently verified actual deviceauth/usercode endpoint responds HTTP 200 JSON on Japanese server. Implement single-owner HTTPS bridge + installer and native pairing; keep deployment status pending until user executes installer.
+Server test RED: missing bridge.py observed before implementation; initial ten tests GREEN, added logout-during-throttle regression. Transport test uses a real local Python HTTPS server and self-signed certificate to verify Swift certificate pin handling.

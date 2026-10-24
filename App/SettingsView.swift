@@ -3,16 +3,17 @@ import SwiftUI
 struct SettingsView: View {
     let store: QuotaStore
     @State private var confirmLogout = false
-    @State private var showEmail = false
     var body: some View {
         NavigationStack {
             Form {
+                Section("日本服务器") {
+                    LabeledContent("服务器", value: store.serverProfile?.serverURL.host ?? "尚未配对")
+                    NavigationLink("连接或更换服务器") { ServerPairingView(store:store) }
+                }
                 Section("账号") {
                     LabeledContent("登录状态", value: store.isSignedIn ? "已连接 ChatGPT" : "未登录")
                     if store.isSignedIn {
                         LabeledContent("套餐", value: (store.snapshot?.plan ?? "未知").uppercased())
-                        Toggle("显示账号邮箱", isOn: $showEmail)
-                        if showEmail, let email = store.credentials?.email { Text(email).textSelection(.enabled) }
                         Button("退出登录", role: .destructive) { confirmLogout = true }
                     }
                 }
@@ -31,16 +32,16 @@ struct SettingsView: View {
                     Link("打开 Codex 官方额度页面", destination: URL(string: "https://chatgpt.com/codex/settings/usage")!)
                 }
                 Section("隐私") {
-                    Text("凭证存储在此设备的系统钥匙串。刷新令牌仅由主应用读取，所有账号请求直接发往 OpenAI。无广告、无分析上报。")
+                    Text("手机仅保存服务器配对信息；OpenAI 登录凭证存储在你的服务器，由服务器负责续期与查询。无广告、无分析上报。")
                     Text("本工具只查询使用情况，不发送生成请求。")
                 }
-                Section { LabeledContent("版本", value: "1.0.0") }
+                Section { LabeledContent("版本", value: "1.1.0 · 服务器版") }
             }
             .navigationTitle("设置")
             .confirmationDialog("退出此账号？", isPresented: $confirmLogout, titleVisibility: .visible) {
-                Button("退出登录", role: .destructive) { store.logout() }
+                Button("退出服务器账号", role: .destructive) { Task { await store.logout() } }
                 Button("取消", role: .cancel) { }
-            } message: { Text("将清除本机账号凭证和小组件的额度数据。") }
+            } message: { Text("将清除服务器保存的账号授权，以及本机小组件的额度记录。") }
         }
     }
 }

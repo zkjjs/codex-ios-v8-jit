@@ -2,23 +2,6 @@ import Foundation
 import Security
 import QuotaCore
 
-struct AccountCredentials: Codable {
-    var sessionID: UUID
-    var accessToken: String
-    var refreshToken: String
-    var idToken: String?
-    var accountID: String?
-    var email: String?
-    var expiresAt: Date
-}
-
-struct WidgetGrant: Codable {
-    let sessionID: UUID
-    let accessToken: String
-    let accountID: String?
-    let expiresAt: Date
-}
-
 enum SecureStore {
     private static let service = "com.zkjjs.codexquota"
     static var sharedGroup: String? {
@@ -82,9 +65,5 @@ enum SecureStore {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw AppError.message("无法清除安全凭证（\(status)），请解锁后重试。")
         }
-    }
-    static func saveWidgetGrant(_ credentials: AccountCredentials) throws {
-        try save(WidgetGrant(sessionID: credentials.sessionID, accessToken: credentials.accessToken,
-                             accountID: credentials.accountID, expiresAt: credentials.expiresAt), key: "widget-grant", shared: true)
     }
 }
