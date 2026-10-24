@@ -22,11 +22,23 @@ fi
 install -d -m 755 "$install_root"
 install -d -o codex-quota -g codex-quota -m 700 "$state_root"
 install -m 644 "$script_dir/bridge.py" "$install_root/bridge.py"
+cat > "$state_root/tls.cnf" <<TLS
+[req]
+prompt=no
+distinguished_name=dn
+x509_extensions=server
+[dn]
+CN=Codex Quota Bridge
+[server]
+subjectAltName=IP:$public_address
+extendedKeyUsage=serverAuth
+keyUsage=critical,digitalSignature,keyEncipherment
+basicConstraints=critical,CA:FALSE
+TLS
+chmod 600 "$state_root/tls.cnf"
 openssl req -x509 -newkey rsa:3072 -sha256 -nodes -days 825 \
   -keyout "$state_root/server.key" -out "$state_root/server.crt" \
-  -subj '/CN=Codex Quota Bridge' -addext "subjectAltName=IP:$public_address" \
-  -addext 'extendedKeyUsage=serverAuth' -addext 'keyUsage=critical,digitalSignature,keyEncipherment' \
-  -addext 'basicConstraints=critical,CA:FALSE' >/dev/null 2>&1
+  -config "$state_root/tls.cnf" >/dev/null 2>&1
 chown codex-quota:codex-quota "$state_root/server.key" "$state_root/server.crt"
 chmod 600 "$state_root/server.key" "$state_root/server.crt"
 python3 - "$install_root/environment" <<'PY'

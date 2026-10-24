@@ -23,3 +23,5 @@ Independent server review: one P2 logout/widget race identified. Replaced reuse 
 Transport investigation: raw TCP and independent Python HTTPS probe both timed out before any Swift TLS challenge, so failure precedes certificate checks. Found HTTPServer.server_bind performs reverse DNS before listen(); added failing getfqdn regression, removed this unnecessary startup dependency and reran all backend tests. Cloud end-to-end rerun pending.
 
 DNS fix verified by cloud TCP and Python HTTPS probes. Swift reached certificate validation and correctly rejected the legacy fixture cert. Apple trusted-server requirements require explicit serverAuth EKU; previous generic self-signed cert lacked it. Updated installer and fixture to serverAuth EKU, digitalSignature/keyEncipherment and CA:FALSE, retaining pin, hostname and validity verification.
+
+Certificate diagnostics confirmed EKU mismatch, then duplicate extension IDs from platform OpenSSL configuration plus addext. Installer and test fixture now use a complete isolated OpenSSL config with a single server extension section, avoiding inherited config and duplicate extensions.
