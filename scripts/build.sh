@@ -33,4 +33,4 @@ xcodebuild -project CodexQuota.xcodeproj -scheme CodexQuota -configuration Debug
     tail -n 100 dist/simulator-build.log
     exit 1
   }
-python3 scripts/capture_ui.py
+if [ "${CAPTURE_UI:-1}" = "1" ]; then python3 scripts/capture_ui.py; fi

@@ -16,6 +16,8 @@ jobs:
       - name: Build IPA
         if: hashFiles('project.yml') != ''
         run: bash scripts/build.sh
+        env:
+          CAPTURE_UI: '0'
       - uses: actions/upload-artifact@v4
         if: always()
         with:

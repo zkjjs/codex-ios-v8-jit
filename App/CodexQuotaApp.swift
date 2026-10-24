@@ -21,7 +21,7 @@ struct RootView: View {
     let store: QuotaStore
     var body: some View {
         TabView {
-            Tab("额度", systemImage: "chart.donut") {
+            Tab("额度", systemImage: "chart.pie.fill") {
                 DashboardView(store: store)
             }
             Tab("设置", systemImage: "slider.horizontal.3") {

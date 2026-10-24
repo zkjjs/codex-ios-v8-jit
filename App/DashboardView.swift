@@ -4,7 +4,6 @@ import QuotaCore
 struct DashboardView: View {
     let store: QuotaStore
     @Environment(\.openURL) private var openURL
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         NavigationStack {
             ZStack {
