@@ -21,6 +21,27 @@ struct WidgetGrant: Codable {
 enum SecureStore {
     private static let service = "com.zkjjs.codexquota"
     static var sharedGroup: String? {
+        // Resigning an unsigned IPA can change the application-identifier prefix.
+        // Learn the actual prefix from a harmless item in the app's default group.
+        let probe: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service + ".prefix", kSecAttrAccount as String: "probe"]
+        var read = probe
+        read[kSecReturnAttributes as String] = true
+        var result: CFTypeRef?
+        var status = SecItemCopyMatching(read as CFDictionary, &result)
+        if status == errSecItemNotFound {
+            var add = probe
+            add[kSecValueData as String] = Data([0])
+            add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            if SecItemAdd(add as CFDictionary, nil) == errSecSuccess {
+                status = SecItemCopyMatching(read as CFDictionary, &result)
+            }
+        }
+        let attrs = result as? [String: Any]
+        if status == errSecSuccess, let actual = attrs?[kSecAttrAccessGroup as String] as? String,
+           let prefix = actual.split(separator: ".").first {
+            return String(prefix) + ".com.zkjjs.codexquota.shared"
+        }
         guard let value = Bundle.main.object(forInfoDictionaryKey: "SharedKeychainGroup") as? String,
               !value.isEmpty, !value.contains("$(") else { return nil }
         return value

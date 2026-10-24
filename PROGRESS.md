@@ -4,3 +4,7 @@ Ruling: Use a separate standalone build branch in the user's existing Codex iOS 
 Ruling: No local Swift or Xcode; run actual Swift tests and iOS compile in macOS Actions, mark device-only validation honestly.
 Pre-flight: All UI and storage consume QuotaCore snapshot types; network code must normalize snake_case wire format at one boundary.
 Task 1: RED observed in Actions run 40118917772: QuotaSnapshot/DeviceCode/RetryPolicy absent. Implemented core semantics; GREEN queued next.
+
+Task 1: complete — Actions 40119045123 passes all 10 core tests.
+Tasks 2–3: implemented; device/simulator compile pending.
+Ruling: Keychain entitlements include a private per-target group before the shared grant group; runtime detects the actual signing prefix for resigned IPAs.

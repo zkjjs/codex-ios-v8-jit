@@ -1,0 +1,59 @@
+name: CodexQuota
+options:
+  bundleIdPrefix: com.zkjjs
+  deploymentTarget:
+    iOS: '26.0'
+packages:
+  QuotaCore:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    IPHONEOS_DEPLOYMENT_TARGET: '26.0'
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ''
+    APP_GROUP_ID: group.com.zkjjs.codexquota
+    SHARED_KEYCHAIN_SUFFIX: com.zkjjs.codexquota.shared
+    GENERATE_INFOPLIST_FILE: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: targeted
+targets:
+  CodexQuota:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zkjjs.codexquota
+        INFOPLIST_FILE: Config/App-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/Shared.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: QuotaCore
+      - target: CodexQuotaWidget
+        embed: true
+  CodexQuotaWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zkjjs.codexquota.widget
+        INFOPLIST_FILE: Config/Widget-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/Shared.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+    dependencies:
+      - package: QuotaCore
+schemes:
+  CodexQuota:
+    build:
+      targets:
+        CodexQuota: all
