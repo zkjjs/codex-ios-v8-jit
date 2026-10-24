@@ -8,3 +8,7 @@ Task 1: RED observed in Actions run 40118917772: QuotaSnapshot/DeviceCode/RetryP
 Task 1: complete — Actions 40119045123 passes all 10 core tests.
 Tasks 2–3: implemented; device/simulator compile pending.
 Ruling: Keychain entitlements include a private per-target group before the shared grant group; runtime detects the actual signing prefix for resigned IPAs.
+
+Review: independently reviewed by ios_review. Accepted 3 important fixes: preserve overlapping Retry-After, add widget freshness boundary, respect mapped shared Keychain suffix. Also fixing earliest-reset marker and clock-driven retry button states. No critical findings.
+
+Review regression RED: run 40119653388 fails for missing SharedState reducer, SigningGroups resolver and timelineBoundaries. Implemented all four regressions and wired shared reducer into app/widget flow.

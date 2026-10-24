@@ -10,6 +10,7 @@ struct DashboardView: View {
             ZStack {
                 background
                 ScrollView {
+                    GlassEffectContainer(spacing: 24) {
                     VStack(alignment: .leading, spacing: 24) {
                         heading
                         if store.isSignedIn || displayedSnapshot != nil {
@@ -25,6 +26,7 @@ struct DashboardView: View {
                         footnote
                     }
                     .padding(.horizontal, 24).padding(.top, 18).padding(.bottom, 36)
+                    }
                 }
                 .refreshable { await store.refresh() }
                 .scrollIndicators(.hidden)
@@ -32,12 +34,14 @@ struct DashboardView: View {
             .navigationTitle("Codex 额度").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { Task { await store.refresh() } } label: {
-                        if store.isRefreshing { ProgressView() }
-                        else { Image(systemName: "arrow.clockwise") }
+                    TimelineView(.periodic(from: .now, by: 5)) { context in
+                        Button { Task { await store.refresh() } } label: {
+                            if store.isRefreshing { ProgressView() }
+                            else { Image(systemName: "arrow.clockwise") }
+                        }
+                        .disabled(!store.isSignedIn || store.isRefreshing || (store.retryAt.map { $0 > context.date } ?? false))
+                        .accessibilityLabel("刷新额度")
                     }
-                    .disabled(!store.isSignedIn || store.isRefreshing || (store.retryAt.map { $0 > Date() } ?? false))
-                    .accessibilityLabel("刷新额度")
                 }
             }
         }
@@ -101,13 +105,17 @@ struct DashboardView: View {
                     Button("取消登录", role: .cancel) { store.cancelLogin() }.font(.subheadline)
                 }
             } else {
-                Button { store.startLogin() } label: {
-                    HStack {
-                        if store.isLoggingIn { ProgressView() }
-                        Text(store.isLoggingIn ? "正在生成授权码…" : "使用 ChatGPT 登录")
-                        Image(systemName: "arrow.right")
-                    }.frame(maxWidth: .infinity)
-                }.buttonStyle(.glassProminent).controlSize(.large).disabled(store.isLoggingIn)
+                TimelineView(.periodic(from: .now, by: 5)) { context in
+                    let coolingDown = store.retryAt.map { $0 > context.date } ?? false
+                    Button { store.startLogin() } label: {
+                        HStack {
+                            if store.isLoggingIn { ProgressView() }
+                            Text(store.isLoggingIn ? "正在生成授权码…" : coolingDown ? "稍后可重新登录" : "使用 ChatGPT 登录")
+                            Image(systemName: "arrow.right")
+                        }.frame(maxWidth: .infinity)
+                    }.buttonStyle(.glassProminent).controlSize(.large)
+                        .disabled(store.isLoggingIn || coolingDown)
+                }
             }
             Label("密码仅在 OpenAI 官方网页输入", systemImage: "lock.shield")
                 .font(.caption2).foregroundStyle(.secondary)

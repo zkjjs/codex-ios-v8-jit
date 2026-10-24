@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 mkdir -p dist
+export HOMEBREW_NO_AUTO_UPDATE=1
 # Prefer a stable installed Xcode capable of compiling native Liquid Glass.
 if [ -d /Applications/Xcode_26.0.app/Contents/Developer ]; then
   export DEVELOPER_DIR=/Applications/Xcode_26.0.app/Contents/Developer

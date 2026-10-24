@@ -23,9 +23,8 @@ struct QuotaProvider: TimelineProvider {
             let unavailable = !SnapshotStore.shared.available
             var entries = [QuotaEntry(date: now, state: state, unavailable: unavailable)]
             // Entries at reset boundaries change the text to pending without inventing a new balance.
-            let resets = Set(state?.snapshot?.windows.compactMap(\.resetAt).filter { $0 > now && $0 < now.addingTimeInterval(86400) } ?? [])
-            for reset in resets.sorted() {
-                entries.append(QuotaEntry(date: reset.addingTimeInterval(1), state: state, unavailable: unavailable))
+            for boundary in state?.snapshot?.timelineBoundaries(after: now) ?? [] {
+                entries.append(QuotaEntry(date: boundary, state: state, unavailable: unavailable))
             }
             var refresh = now.addingTimeInterval(1800)
             if let next = state?.snapshot?.nextReset(after: now) { refresh = min(refresh, next.addingTimeInterval(5)) }
@@ -107,6 +106,8 @@ struct QuotaWidgetView: View {
                             .frame(width: 55, height: 55)
                         Text(window.title).font(.caption.weight(.medium)).lineLimit(2)
                     }
+                    Text(window.resetAt != nil && window.resetAt == snapshot.nextReset(after: entry.date) ? "最近重置" : "下次重置")
+                        .font(.system(size: 8)).foregroundStyle(.secondary)
                     ResetLabel(window: window, now: entry.date, compact: true)
                     if window.id == snapshot.windows.first?.id { footer(snapshot) }
                 }.frame(maxWidth: .infinity, alignment: .leading)

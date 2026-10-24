@@ -2,14 +2,6 @@ import Foundation
 import Darwin
 import QuotaCore
 
-struct SharedState: Codable {
-    var sessionID: UUID?
-    var snapshot: QuotaSnapshot?
-    var message: String?
-    var retryAt: Date?
-    var privacyHidden: Bool = false
-}
-
 struct SnapshotStore {
     static let shared = SnapshotStore()
     var root: URL? {
@@ -51,11 +43,7 @@ struct SnapshotStore {
     }
     func write(_ snapshot: QuotaSnapshot, sessionID: UUID) throws {
         try update { state in
-            guard state.sessionID == sessionID else { return }
-            guard state.snapshot == nil || state.snapshot!.fetchedAt <= snapshot.fetchedAt else { return }
-            state.snapshot = snapshot
-            state.message = nil
-            state.retryAt = nil
+            state.apply(snapshot, sessionID: sessionID, now: Date())
         }
     }
     func failure(_ message: String, retryAt: Date?, sessionID: UUID) throws {

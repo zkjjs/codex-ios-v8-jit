@@ -35,7 +35,7 @@ final class QuotaStore {
         if !cache.available { sharingWarning = "当前签名不支持小组件共享。需保留 App Groups、共享钥匙串和 Widget 扩展。" }
     }
     func startLogin() {
-        guard !isLoggingIn else { return }
+        guard !isLoggingIn, retryAt.map({ $0 <= Date() }) ?? true else { return }
         generation = UUID()
         let attempt = generation
         isLoggingIn = true
@@ -102,8 +102,14 @@ final class QuotaStore {
             snapshot = fresh
             message = nil
             retryAt = nil
-            do { try cache.write(fresh, sessionID: account.sessionID) }
-            catch { sharingWarning = error.localizedDescription }
+            do {
+                try cache.write(fresh, sessionID: account.sessionID)
+                let state = try cache.read()
+                if state.sessionID == account.sessionID {
+                    retryAt = state.retryAt
+                    if retryAt.map({ $0 > Date() }) == true { message = state.message }
+                }
+            } catch { sharingWarning = error.localizedDescription }
             WidgetCenter.shared.reloadAllTimelines()
         } catch is CancellationError { }
         catch {

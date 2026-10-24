@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import QuotaCore
 
 struct AccountCredentials: Codable {
     var sessionID: UUID
@@ -38,13 +39,9 @@ enum SecureStore {
             }
         }
         let attrs = result as? [String: Any]
-        if status == errSecSuccess, let actual = attrs?[kSecAttrAccessGroup as String] as? String,
-           let prefix = actual.split(separator: ".").first {
-            return String(prefix) + ".com.zkjjs.codexquota.shared"
-        }
-        guard let value = Bundle.main.object(forInfoDictionaryKey: "SharedKeychainGroup") as? String,
-              !value.isEmpty, !value.contains("$(") else { return nil }
-        return value
+        let actual = status == errSecSuccess ? attrs?[kSecAttrAccessGroup as String] as? String : nil
+        let configured = Bundle.main.object(forInfoDictionaryKey: "SharedKeychainGroup") as? String ?? ""
+        return SigningGroups.resolve(configured: configured, actualDefaultGroup: actual)
     }
     private static func query(_ key: String, shared: Bool) throws -> [String: Any] {
         var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
