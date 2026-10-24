@@ -1,0 +1,25 @@
+name: Codex Quota IPA
+on:
+  push:
+    branches: ['build/codex-quota-20261025']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test quota semantics
+        run: swift test
+      - name: Build IPA
+        if: hashFiles('project.yml') != ''
+        run: bash scripts/build.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CodexQuota-build
+          path: |
+            dist/*
+          if-no-files-found: ignore
