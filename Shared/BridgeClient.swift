@@ -45,7 +45,11 @@ private final class PinnedServerDelegate: NSObject, URLSessionDelegate, URLSessi
         #if DEBUG
         print("Bridge TLS evaluating paired certificate")
         #endif
-        guard SecTrustEvaluateWithError(trust, nil) else {
+        var trustError: CFError?
+        guard SecTrustEvaluateWithError(trust, &trustError) else {
+            #if DEBUG
+            print("Bridge TLS validation error", String(describing:trustError))
+            #endif
             completionHandler(.cancelAuthenticationChallenge, nil); return
         }
         #if DEBUG
