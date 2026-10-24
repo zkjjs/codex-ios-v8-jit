@@ -19,3 +19,5 @@ Server-mode change approved by user: use Japanese Ubuntu server 52.195.185.75. D
 Server test RED: missing bridge.py observed before implementation; initial ten tests GREEN, added logout-during-throttle regression. Transport test uses a real local Python HTTPS server and self-signed certificate to verify Swift certificate pin handling.
 
 Independent server review: one P2 logout/widget race identified. Replaced reuse of session UUID with new persisted/shared profile identity after logout or server login_required, so pre-logout widget completions are rejected by existing reducer. Added transport profile rotation test; no other material security finding.
+
+Transport investigation: raw TCP and independent Python HTTPS probe both timed out before any Swift TLS challenge, so failure precedes certificate checks. Found HTTPServer.server_bind performs reverse DNS before listen(); added failing getfqdn regression, removed this unnecessary startup dependency and reran all backend tests. Cloud end-to-end rerun pending.

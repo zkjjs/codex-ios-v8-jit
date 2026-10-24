@@ -8,6 +8,7 @@ import os
 import pathlib
 import secrets
 import ssl
+import socketserver
 import threading
 import time
 import urllib.error
@@ -185,6 +186,12 @@ class SecureServer(ThreadingHTTPServer):
         self.context = context
         self.slots = threading.BoundedSemaphore(32)
         super().__init__(address, Handler)
+    def server_bind(self):
+        # HTTPServer otherwise performs reverse DNS before listen(), delaying startup
+        # on networks without a usable PTR resolver. No hostname discovery is needed.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name = self.server_address[0]
+        self.server_port = self.server_address[1]
     def get_request(self):
         connection, address = self.socket.accept()
         connection.settimeout(30)

@@ -2,6 +2,7 @@ import importlib.util
 import pathlib
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('bridge', pathlib.Path(__file__).parents[1] / 'bridge.py')
 bridge = importlib.util.module_from_spec(spec)
@@ -77,6 +78,10 @@ class BridgeTests(unittest.TestCase):
         self.service.retry_at=self.now+120
         self.assertEqual(self.dispatch('POST','/v1/logout')[0],200)
         self.assertFalse(self.service.account)
+    def test_listener_does_not_depend_on_reverse_dns(self):
+        with patch('socket.getfqdn',side_effect=AssertionError('Listener must not resolve reverse DNS')):
+            server = bridge.SecureServer(('127.0.0.1',0),None)
+            server.server_close()
     def test_unknown_routes_and_invalid_flow(self):
         self.assertEqual(self.dispatch('GET','/account.json')[0],404)
         self.assertEqual(self.dispatch('POST','/v1/login/poll',{'flow_id':'unknown'})[0],410)
