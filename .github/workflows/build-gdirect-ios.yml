@@ -1,0 +1,52 @@
+name: Build gdirect iOS IPA
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'codex/ios-build/**'
+permissions:
+  contents: read
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+defaults:
+  run:
+    working-directory: gdirect-ios
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --manifest-path core/Cargo.toml --locked
+  ipa:
+    runs-on: xcode-27
+    timeout-minutes: 60
+    needs: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check Xcode SDK
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+          sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+          test "${sdk_version%%.*}" -ge 27 || { echo "Select a runner with Xcode/iOS SDK 27 or newer."; exit 1; }
+      - run: brew install xcodegen
+      - name: Compile unsigned IPA
+        run: |
+          set -o pipefail
+          ./scripts/build-unsigned-ipa.sh 2>&1 | tee ios-build.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GDirect-unsigned-ipa
+          path: gdirect-ios/build/GDirect-unsigned.ipa
+          if-no-files-found: error
+      - name: Preserve compiler logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: gdirect-ios/ios-build.log
+          if-no-files-found: ignore

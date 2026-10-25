@@ -1,0 +1,11 @@
+.DS_Store
+.superpowers/
+.build/
+.build-*/
+core/target/
+ios/*.xcodeproj/
+ios/Config.local.xcconfig
+build/
+*.ipa
+*.xcarchive
+*.xcresult

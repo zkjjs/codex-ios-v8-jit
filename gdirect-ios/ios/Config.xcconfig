@@ -1,0 +1,4 @@
+GDIRECT_BUNDLE_ID = org.gdirect.ios
+GOOGLE_CLIENT_ID = configure-ios-oauth.apps.googleusercontent.com
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.configure-ios-oauth
+#include? "Config.local.xcconfig"
