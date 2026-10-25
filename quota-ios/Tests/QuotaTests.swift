@@ -20,6 +20,39 @@ final class QuotaTests: XCTestCase {
         XCTAssertEqual(SharedStore.groupCandidates(metadata: [], profile: nil), [group])
     }
 
+    @available(iOS 17.0, *)
+    func testAppModeUsesSavedConnectionAndIgnoresManualFields() {
+        let saved = ServerConnection(server: "https://saved.example", accessCode: "saved-code")
+        let result = WidgetConnectionSelection.resolve(mode: .app, server: "https://old.example",
+            accessCode: "old-code", sharedConnection: saved)
+        XCTAssertEqual(result.connection?.server, saved.server)
+        XCTAssertEqual(result.connection?.accessCode, saved.accessCode)
+        XCTAssertFalse(result.manual)
+        XCTAssertNil(result.error)
+    }
+
+    @available(iOS 17.0, *)
+    func testAppModeWithoutSharedConfigurationExplainsMissingSharing() {
+        let result = WidgetConnectionSelection.resolve(mode: .app, server: nil,
+            accessCode: nil, sharedConnection: nil)
+        XCTAssertNil(result.connection)
+        XCTAssertTrue(result.error?.contains("共享配置") == true)
+    }
+
+    @available(iOS 17.0, *)
+    func testManualModeRequiresCodeAndDoesNotUseSavedConnection() {
+        let saved = ServerConnection(server: "https://saved.example", accessCode: "saved-code")
+        let missing = WidgetConnectionSelection.resolve(mode: .manual, server: nil,
+            accessCode: "  ", sharedConnection: saved)
+        XCTAssertNil(missing.connection)
+        XCTAssertNotNil(missing.error)
+        let result = WidgetConnectionSelection.resolve(mode: .manual, server: " https://manual.example ",
+            accessCode: " manual-code ", sharedConnection: saved)
+        XCTAssertEqual(result.connection?.server, "https://manual.example")
+        XCTAssertEqual(result.connection?.accessCode, "manual-code")
+        XCTAssertTrue(result.manual)
+    }
+
     func testDecodeRealSnapshotAndMissingReset() throws {
         let data = Data("""
         {"version":1,"updatedAt":100,"stale":false,"plan":"plus","windows":[

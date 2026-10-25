@@ -18,8 +18,24 @@ struct QuotaConfiguration: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "服务器连接"
     static var description = IntentDescription("默认使用 App 的共享连接。签名不支持 App Groups 时，可在这里填写服务器和只读查询码。")
 
+    @Parameter(title: "配置来源", default: .app) var source: WidgetConnectionMode
+
     @Parameter(title: "服务器地址（可选）") var server: String?
     @Parameter(title: "只读查询码（可选）") var accessCode: String?
+
+    static var parameterSummary: some ParameterSummary {
+        When(\.$source, .equalTo, WidgetConnectionMode.manual) {
+            Summary {
+                \.$source
+                \.$server
+                \.$accessCode
+            }
+        } otherwise: {
+            Summary {
+                \.$source
+            }
+        }
+    }
 }
 
 @available(iOS 17.0, *)
@@ -35,12 +51,12 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         WidgetLoader.timeline(await load(configuration))
     }
     private func resolve(_ configuration: QuotaConfiguration) -> (connection: ServerConnection?, manual: Bool, error: String?) {
-        let server = configuration.server?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let code = configuration.accessCode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !server.isEmpty || !code.isEmpty else { return (nil, false, nil) }
-        guard !code.isEmpty else { return (nil, true, "编辑小组件，填写查询码") }
-        return (.init(server: server.isEmpty ? ServerConnection.defaultServer : server, accessCode: code), true, nil)
+        let selected = WidgetConnectionSelection.resolve(mode: configuration.source,
+            server: configuration.server, accessCode: configuration.accessCode,
+            sharedConnection: SharedStore.widgetConnection())
+        return (selected.connection, selected.manual, selected.error)
     }
+
     private func load(_ configuration: QuotaConfiguration) async -> QuotaEntry {
         let resolved = resolve(configuration)
         if let error = resolved.error { return .init(date: .now, snapshot: nil, message: error) }
