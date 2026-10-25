@@ -38,7 +38,9 @@ for rust_target in aarch64-apple-ios aarch64-apple-ios-sim; do
   export AR="$(xcrun --sdk "$sdk" --find ar)"
   export RANLIB="$(xcrun --sdk "$sdk" --find ranlib)"
   export CFLAGS="-target $clang_target -isysroot $sdk_path -O2"
-  export CXXFLAGS="$CFLAGS -std=c++11"
+  # SecureTransport does not expose the server-only SSLSetDiffieHellmanParams on iOS.
+  # aria2 already guards that optional server configuration with this macro.
+  export CXXFLAGS="$CFLAGS -std=c++11 -DCIPHER_NO_DHPARAM"
   export LDFLAGS="-target $clang_target -isysroot $sdk_path"
   export am_cv_func_iconv=no ac_cv_header_iconv_h=no
   ./configure --host=aarch64-apple-darwin --prefix="$slice_root/aria2" \
