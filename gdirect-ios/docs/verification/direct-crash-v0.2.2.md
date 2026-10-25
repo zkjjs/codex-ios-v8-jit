@@ -9,3 +9,9 @@ A native regression linked against real Linux libaria2 runs three sessions again
 Fix: initialize aria2 once for process lifetime, serialize bridge calls, finalize each per-download session normally. OS reclaims process-global resources when the app exits; libraryDeinit must not run between transfers. Keep route pointers scoped to each synchronous call.
 
 Actual-device verification remains required after installing the rebuilt IPA.
+
+## Build verification
+
+GitHub run https://github.com/zkjjs/codex-ios-v8-jit/actions/runs/40183882486 succeeded. Source commit 98ab0fd2750fe89d23533f65b0e30816006ca69b. Native repeated-session regression passed; 9 Rust tests, 4 Python config tests, 12 Swift support tests and 9 iOS simulator storage/recovery tests passed. Archive and iOS test both succeeded.
+
+Downloaded IPA verified version 0.2.2 build 4, org.gdirect.ios, user-supplied OAuth client and callback preserved. IPA SHA256 5facdff9c534dbfc0dec62788ebb5a88d9172f13eaaf55c53ad47fcbed6a0408. Native debug symbols/link map artifact retained. Physical-device regression still needs user testing.
