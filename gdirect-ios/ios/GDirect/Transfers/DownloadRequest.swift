@@ -6,7 +6,7 @@ enum DownloadEngineKind: String, Codable, CaseIterable {
 }
 
 enum TransferState: String, Codable {
-    case queued, waitingForSystem, running, finalizing, pausing, paused, completed, failed, cancelled
+    case queued, waitingForSystem, running, finalizing, pausing, deleting, paused, completed, failed, cancelled
     var title: String {
         switch self {
         case .queued: "等待开始"
@@ -14,6 +14,7 @@ enum TransferState: String, Codable {
         case .running: "下载中"
         case .finalizing: "正在校验文件"
         case .pausing: "正在保存断点"
+        case .deleting: "正在删除本地文件"
         case .paused: "已暂停，可继续"
         case .completed: "已完成"
         case .failed: "下载失败"
@@ -56,8 +57,13 @@ struct TransferRecord: Identifiable, Codable {
     }
     var canResume: Bool { [.queued, .paused, .failed, .cancelled].contains(state) }
     func acceptsEvent(attempt: UUID?) -> Bool { attemptID == attempt }
+    mutating func pauseForExpiration(attempt: UUID) {
+        guard attemptID == attempt, state == .running else { return }
+        state = .paused
+        message = "系统结束了后台任务，断点已保留。"
+    }
     mutating func recoverAfterLaunch() {
-        if state == .pausing { state = .paused }
+        if state == .pausing || state == .deleting { state = .paused }
         if engine == .direct && state.isActive {
             state = .paused
             message = "上次直连任务已中断，点击继续以恢复下载。"

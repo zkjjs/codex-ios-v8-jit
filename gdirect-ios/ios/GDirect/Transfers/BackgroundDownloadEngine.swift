@@ -40,7 +40,7 @@ final class BackgroundDownloadEngine: NSObject, URLSessionDownloadDelegate, @unc
         lock.lock(); stopped.insert(key); lock.unlock()
         session.getAllTasks { [weak self] tasks in
             let matches = tasks.compactMap { $0 as? URLSessionDownloadTask }.filter { $0.taskDescription == key }
-            if matches.isEmpty { self?.emit(id, attempt, .stopped(nil)) }
+            if matches.isEmpty { self?.session.delegateQueue.addOperation { self?.emit(id, attempt, .stopped(nil)) } }
             for task in matches {
                 task.cancel { data in self?.emit(id, attempt, .stopped(data)) }
             }
@@ -85,6 +85,10 @@ final class BackgroundDownloadEngine: NSObject, URLSessionDownloadDelegate, @unc
             if let response = downloadTask.response as? HTTPURLResponse {
                 let manifest = ["attempt": attempt.uuidString, "url": response.url?.absoluteString ?? "", "status": String(response.statusCode)]
                 try JSONEncoder().encode(manifest).write(to: directory.appendingPathComponent("received.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            }
+            if isStopped(downloadTask) {
+                try? FileManager.default.removeItem(at: staging)
+                return
             }
             emit(id, attempt, .downloaded(staging, downloadTask.response as? HTTPURLResponse))
         } catch { emit(id, attempt, .failed("无法保存下载文件，检查剩余空间。", nil)) }

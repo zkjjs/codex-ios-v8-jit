@@ -114,6 +114,7 @@ pub fn execute(input: &str, progress: Option<Progress>) -> String {
                 ensure!(allowed_url(&base), "untrusted download URL");
                 json!({"url":drive::confirmation(field(&value, "html")?, &base)?.as_str()})
             }
+            "candidates" => json!({"candidates":network::builtin_candidates()}),
             "scan" => network::scan(&value, progress)?,
             "list" => network::list(&value)?,
             "metadata" => network::metadata(&value)?,

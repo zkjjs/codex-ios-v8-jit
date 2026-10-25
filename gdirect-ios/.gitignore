@@ -9,3 +9,7 @@ build/
 *.ipa
 *.xcarchive
 *.xcresult
+
+__pycache__/
+*.pyc
+.swiftpm/

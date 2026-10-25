@@ -12,6 +12,7 @@
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UIBackgroundModes</key><array><string>processing</string></array>
 <key>BGTaskSchedulerPermittedIdentifiers</key><array><string>$(PRODUCT_BUNDLE_IDENTIFIER).download.*</string></array>
+<key>GDIRECTOAuthBundleID</key><string>$(GDIRECT_BUNDLE_ID)</string>
 <key>GIDClientID</key><string>$(GOOGLE_CLIENT_ID)</string>
 <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLSchemes</key><array><string>$(GOOGLE_REVERSED_CLIENT_ID)</string></array></dict></array>
 <key>LSSupportsOpeningDocumentsInPlace</key><true/>

@@ -17,7 +17,8 @@ final class TaskStore {
         do {
             try execute("PRAGMA journal_mode=WAL;")
             try execute("CREATE TABLE IF NOT EXISTS transfers(id TEXT PRIMARY KEY NOT NULL, payload BLOB NOT NULL);")
-            try execute("PRAGMA user_version=1;")
+            try execute("CREATE TABLE IF NOT EXISTS endpoint_state(id INTEGER PRIMARY KEY CHECK(id=1), payload BLOB NOT NULL);")
+            try execute("PRAGMA user_version=2;")
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: path)
             var resource = self.root
             var values = URLResourceValues()
@@ -57,6 +58,35 @@ final class TaskStore {
         }
         guard result == SQLITE_DONE else { throw AppFailure(message: "读取下载数据库失败。") }
         return records.sorted { $0.createdAt > $1.createdAt }
+    }
+    func removeLocalTransfer(_ id: UUID) throws {
+        let directory = root.appendingPathComponent("transfers", isDirectory: true).appendingPathComponent(id.uuidString, isDirectory: true)
+        if FileManager.default.fileExists(atPath: directory.path) { try FileManager.default.removeItem(at: directory) }
+        try delete(id)
+    }
+    private func delete(_ id: UUID) throws {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, "DELETE FROM transfers WHERE id=?;", -1, &statement, nil) == SQLITE_OK else { throw AppFailure(message: "无法删除下载记录。") }
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_bind_text(statement, 1, id.uuidString, -1, transient) == SQLITE_OK,
+              sqlite3_step(statement) == SQLITE_DONE else { throw AppFailure(message: "下载记录删除失败。") }
+    }
+    func saveEndpoints(_ endpoints: [DirectEndpoint]) throws {
+        let data = try JSONEncoder().encode(endpoints)
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, "INSERT OR REPLACE INTO endpoint_state(id,payload) VALUES(1,?);", -1, &statement, nil) == SQLITE_OK else { throw AppFailure(message: "无法保存 IP 检测结果。") }
+        defer { sqlite3_finalize(statement) }
+        let bound = data.withUnsafeBytes { sqlite3_bind_blob(statement, 1, $0.baseAddress, Int32($0.count), transient) }
+        guard bound == SQLITE_OK, sqlite3_step(statement) == SQLITE_DONE else { throw AppFailure(message: "无法保存 IP 检测结果。") }
+    }
+    func loadEndpoints() throws -> [DirectEndpoint] {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, "SELECT payload FROM endpoint_state WHERE id=1;", -1, &statement, nil) == SQLITE_OK else { throw AppFailure(message: "无法读取 IP 缓存。") }
+        defer { sqlite3_finalize(statement) }
+        let result = sqlite3_step(statement)
+        if result == SQLITE_DONE { return [] }
+        guard result == SQLITE_ROW, let bytes = sqlite3_column_blob(statement, 0) else { throw AppFailure(message: "IP 缓存读取失败。") }
+        return try JSONDecoder().decode([DirectEndpoint].self, from: Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, 0))))
     }
     func directory(for id: UUID) throws -> URL {
         let url = root.appendingPathComponent("transfers", isDirectory: true).appendingPathComponent(id.uuidString, isDirectory: true)

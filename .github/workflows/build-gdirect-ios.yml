@@ -1,6 +1,16 @@
 name: Build gdirect iOS IPA
 on:
   workflow_dispatch:
+    inputs:
+      google_client_id:
+        description: 'Optional iOS OAuth client ID (public identifier, no client secret)'
+        required: false
+        type: string
+      bundle_id:
+        description: 'Bundle ID registered to the iOS OAuth client'
+        required: false
+        type: string
+        default: org.gdirect.ios
   push:
     branches:
       - 'codex/ios-build/**'
@@ -19,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - run: python3 -m unittest discover -s Tests -p 'test_*.py' -v
       - run: cargo test --manifest-path core/Cargo.toml --locked
   ipa:
     runs-on: xcode-27
@@ -43,9 +54,11 @@ jobs:
         id: native-cache
         with:
           path: gdirect-ios/build/GDirectCore.xcframework
-          key: gdirect-native-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.sdk }}-${{ steps.toolchain.outputs.rust }}-${{ hashFiles('gdirect-ios/core/Cargo.toml', 'gdirect-ios/core/Cargo.lock', 'gdirect-ios/core/build.rs', 'gdirect-ios/core/src/**', 'gdirect-ios/native/**', 'gdirect-ios/vendor/**', 'gdirect-ios/scripts/build-ios-core.sh') }}
+          key: gdirect-native-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.sdk }}-${{ steps.toolchain.outputs.rust }}-${{ hashFiles('gdirect-ios/core/Cargo.toml', 'gdirect-ios/core/Cargo.lock', 'gdirect-ios/core/build.rs', 'gdirect-ios/core/default-endpoints.json', 'gdirect-ios/core/src/**', 'gdirect-ios/native/**', 'gdirect-ios/vendor/**', 'gdirect-ios/scripts/build-ios-core.sh') }}
       - name: Compile unsigned IPA
         env:
+          GDIRECT_GOOGLE_CLIENT_ID: ${{ inputs.google_client_id || vars.GDIRECT_GOOGLE_CLIENT_ID }}
+          GDIRECT_BUNDLE_ID: ${{ inputs.bundle_id || vars.GDIRECT_BUNDLE_ID || 'org.gdirect.ios' }}
           GDIRECT_USE_CACHED_CORE: ${{ steps.native-cache.outputs.cache-hit == 'true' && '1' || '0' }}
         run: |
           set -o pipefail
@@ -55,6 +68,19 @@ jobs:
           name: GDirect-unsigned-ipa
           path: gdirect-ios/build/GDirect-unsigned.ipa
           if-no-files-found: error
+      - name: Run iOS storage and recovery tests
+        run: |
+          set -o pipefail
+          ./scripts/test-ios.sh 2>&1 | tee ios-test.log
+      - name: Preserve test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-results
+          path: |
+            gdirect-ios/ios-test.log
+            gdirect-ios/build/GDirectTests.xcresult
+          if-no-files-found: ignore
       - name: Preserve compiler logs
         if: always()
         uses: actions/upload-artifact@v4

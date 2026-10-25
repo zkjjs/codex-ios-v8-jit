@@ -61,6 +61,7 @@ struct DriveBrowserView: View {
         if reset || loadedAccount != account { files = []; page = nil }
         message = nil
         do {
+            if model.engine == .direct && model.directIP.isEmpty { throw AppFailure(message: "请先在设置中检测并选择直连 IP。") }
             let token = try await model.auth.accessToken(accountID: account)
             var request: [String: Any] = ["command": "list", "folder": folderID, "token": token]
             if model.engine == .direct && !model.directIP.isEmpty { request["ip"] = model.directIP }

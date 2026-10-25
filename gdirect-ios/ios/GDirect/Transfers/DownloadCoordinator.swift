@@ -15,6 +15,8 @@ final class DownloadCoordinator {
     private var finalizing = 0
     private var backgroundEventsFinished = false
     private var backgroundCompletion: (() -> Void)?
+    private var rateMeters: [UUID: TransferRateMeter] = [:]
+    private var lastActivityUpdate: [UUID: TimeInterval] = [:]
     private var lastSaved: [UUID: Date] = [:]
     private var background: BackgroundDownloadEngine!
     let backgroundIdentifier = "\(Bundle.main.bundleIdentifier!).transfers"
@@ -75,6 +77,7 @@ final class DownloadCoordinator {
         }
         preparing.insert(id)
         defer { preparing.remove(id) }
+        rateMeters[id] = TransferRateMeter()
         let attempt = UUID()
         update(id) { $0.state = .queued; $0.message = nil; $0.attemptID = attempt }
         do {
@@ -124,6 +127,32 @@ final class DownloadCoordinator {
             if value.state == .waitingForSystem { cancellations.removeValue(forKey: id) }
         }
     }
+    func deleteLocal(_ id: UUID) {
+        guard let value = record(id), value.state != .deleting else { return }
+        update(id) { $0.state = .deleting; $0.message = "仅删除本地文件，云盘原文件不受影响。" }
+        if value.engine == .system && (value.state.isActive || preparing.contains(id)) {
+            background.pause(id: id, attempt: value.attemptID)
+        } else if let cancellation = cancellations[id] {
+            cancellation.cancel()
+            continued.cancelPending(id)
+            if value.state == .waitingForSystem {
+                cancellations.removeValue(forKey: id)
+                finishDeletion(id)
+            }
+        } else {
+            finishDeletion(id)
+        }
+    }
+    private func finishDeletion(_ id: UUID) {
+        guard record(id)?.state == .deleting else { return }
+        do {
+            try store.removeLocalTransfer(id)
+            records.removeAll { $0.id == id }
+            rateMeters.removeValue(forKey: id)
+            lastSaved.removeValue(forKey: id)
+            lastActivityUpdate.removeValue(forKey: id)
+        } catch { update(id) { $0.state = .failed; $0.message = "本地删除未完成：\(error.localizedDescription)" } }
+    }
     func pauseAccount(_ accountID: String) {
         for value in records where value.accountID == accountID && value.state.isActive { pause(value.id) }
     }
@@ -135,6 +164,7 @@ final class DownloadCoordinator {
     private func update(_ id: UUID, persist: Bool = true, _ change: (inout TransferRecord) -> Void) {
         guard let index = records.firstIndex(where: { $0.id == id }) else { return }
         change(&records[index])
+        if records[index].state != .running { rateMeters.removeValue(forKey: id) }
         if persist {
             do { try store.save(records[index]); lastSaved[id] = Date() }
             catch { errorMessage = error.localizedDescription }
@@ -142,8 +172,18 @@ final class DownloadCoordinator {
     }
     private func progress(_ id: UUID, done: Int64, total: Int64) {
         guard record(id)?.state == .running else { return }
+        if done == 0 && total == 0 && (record(id)?.completedBytes ?? 0) > 0 { return }
+        rateMeters[id, default: TransferRateMeter()].record(completedBytes: done, at: ProcessInfo.processInfo.systemUptime)
         let persist = Date().timeIntervalSince(lastSaved[id] ?? .distantPast) >= 1
         update(id, persist: persist) { $0.completedBytes = max(0, done); $0.totalBytes = max(0, total) }
+    }
+    func speed(for id: UUID) -> Double {
+        guard record(id)?.state == .running else { return 0 }
+        return rateMeters[id]?.bytesPerSecond(at: ProcessInfo.processInfo.systemUptime) ?? 0
+    }
+    func remainingSeconds(for id: UUID) -> TimeInterval? {
+        guard let value = record(id), value.state == .running else { return nil }
+        return rateMeters[id]?.remainingSeconds(totalBytes: value.totalBytes, completedBytes: value.completedBytes, at: ProcessInfo.processInfo.systemUptime)
     }
     private func runDirect(id: UUID, url: URL, task: BGContinuedProcessingTask, cancellation: NativeCancellation) {
         guard let value = record(id), value.state == .waitingForSystem else {
@@ -155,16 +195,18 @@ final class DownloadCoordinator {
         task.expirationHandler = { [weak self] in
             cancellation.cancel()
             DispatchQueue.main.async {
-                MainActor.assumeIsolated { self?.update(id) { $0.state = .paused; $0.message = "系统结束了后台任务，断点已保留。" } }
+                MainActor.assumeIsolated { self?.update(id) { $0.pauseForExpiration(attempt: value.attemptID) } }
             }
         }
         update(id) { $0.state = .running }
         Task {
             var success = false
             defer {
+                task.expirationHandler = nil
                 task.setTaskCompleted(success: success)
                 continued.finished(id)
                 cancellations.removeValue(forKey: id)
+                if record(id)?.state == .deleting { finishDeletion(id) }
             }
             do {
                 let directory = try store.directory(for: id)
@@ -181,6 +223,13 @@ final class DownloadCoordinator {
                                 self?.progress(id, done: done, total: total)
                                 task.progress.totalUnitCount = max(0, total)
                                 task.progress.completedUnitCount = max(0, done)
+                                if let self {
+                                    let now = ProcessInfo.processInfo.systemUptime
+                                    if now - (self.lastActivityUpdate[id] ?? 0) >= 1 {
+                                        self.lastActivityUpdate[id] = now
+                                        task.updateTitle("gdirect 下载", subtitle: "\(value.name) · \(TransferRateMeter.speedLabel(self.speed(for: id)))")
+                                    }
+                                }
                             }
                         }
                     }
@@ -213,9 +262,11 @@ final class DownloadCoordinator {
         switch event {
         case let .progress(done, total): progress(id, done: done, total: total)
         case let .stopped(data):
+            if value.state == .deleting { finishDeletion(id); return }
             saveResumeData(data, id: id)
             if record(id)?.state == .pausing { update(id) { $0.state = .paused } }
         case let .failed(message, data):
+            if value.state == .deleting { finishDeletion(id); return }
             saveResumeData(data, id: id)
             update(id) { $0.state = .failed; $0.message = message }
         case let .downloaded(file, response):

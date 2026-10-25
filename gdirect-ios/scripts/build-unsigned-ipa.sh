@@ -13,6 +13,7 @@ if [[ "${GDIRECT_USE_CACHED_CORE:-0}" == 1 ]]; then
 else
   ./scripts/build-ios-core.sh
 fi
+python3 scripts/configure-google-oauth.py
 (cd ios && xcodegen generate)
 xcodebuild -project ios/GDirect.xcodeproj -scheme GDirect -configuration Release \
   -destination 'generic/platform=iOS' -archivePath build/GDirect-unsigned.xcarchive \
