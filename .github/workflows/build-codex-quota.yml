@@ -80,6 +80,13 @@ jobs:
             -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO test 2>&1 | tee quota-ios/out/tests.log
       - name: Package unsigned IPA
         run: bash quota-ios/scripts/package-ipa.sh quota-ios/build-device/Build/Products/Release-iphoneos/CodexQuota.app quota-ios/out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CodexQuota-unsigned-IPA
+          path: |
+            quota-ios/out/CodexQuota-unsigned.ipa
+            quota-ios/out/SHA256SUMS
+          if-no-files-found: error
       - name: Export widget rendering screenshots
         if: always()
         continue-on-error: true
@@ -104,13 +111,6 @@ jobs:
           xcrun simctl launch "$QUOTA_SIMULATOR_ID" com.zkjjs.codexquota
           sleep 3
           xcrun simctl io "$QUOTA_SIMULATOR_ID" screenshot quota-ios/out/Launch.png
-      - uses: actions/upload-artifact@v4
-        with:
-          name: CodexQuota-unsigned-IPA
-          path: |
-            quota-ios/out/CodexQuota-unsigned.ipa
-            quota-ios/out/SHA256SUMS
-          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:

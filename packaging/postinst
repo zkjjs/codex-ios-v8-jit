@@ -1,0 +1,32 @@
+#!/bin/sh
+set -eu
+
+if [ -n "${JB_ROOT:-}" ]; then
+    PREFIX="$JB_ROOT"
+else
+    PREFIX="$(ls -d /var/containers/Bundle/Application/.jbroot-* 2>/dev/null | head -n 1)"
+    [ -n "$PREFIX" ] || PREFIX="/var/jb"
+fi
+
+HOME_DIR="${PREFIX}/var/mobile/codex"
+CODEX_HOME="${HOME_DIR}/.codex"
+ENTITLEMENTS="${PREFIX}/usr/local/share/entitlements/codex.plist"
+LDID="${PREFIX}/usr/bin/ldid"
+
+# Do not copy defaults or remove files here: this directory may contain custom
+# providers, model settings, and credentials from a previous Codex revision.
+mkdir -p "$CODEX_HOME"
+chown -R 501:501 "$HOME_DIR"
+
+if [ -x "$LDID" ] && [ -f "$ENTITLEMENTS" ]; then
+    for binary in \
+        "${PREFIX}/usr/local/lib/node_modules/@openai/codex/vendor/aarch64-apple-ios/codex/codex" \
+        "${PREFIX}/usr/local/lib/node_modules/@openai/codex/vendor/aarch64-apple-ios/codex/codex-code-mode-host"
+    do
+        [ -f "$binary" ] || continue
+        chmod 755 "$binary"
+        "$LDID" -S"$ENTITLEMENTS" "$binary"
+    done
+fi
+
+exit 0

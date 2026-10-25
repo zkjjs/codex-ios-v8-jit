@@ -17,7 +17,7 @@ struct QuotaWidgetContent: View {
     private var stale: Bool { entry.message != nil || entry.snapshot?.isStale(at: entry.date) == true }
 
     var body: some View {
-        content.foregroundStyle(ink).privacySensitive()
+        content.foregroundStyle(ink)
     }
 
     private var content: some View {
