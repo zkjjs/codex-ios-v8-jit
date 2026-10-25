@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <mutex>
 
 // One synchronous session per call. No C++ exception crosses the C ABI.
 using ProgressCallback = int (*)(int64_t, int64_t, int, int, void*);
@@ -11,13 +12,16 @@ extern "C" int gdirect_download_ex(const char* url, const char* dir, const char*
                                 const char* ip, const char* sni, const char* token,
                                 const char* ca, int connections, ProgressCallback callback, void* data, bool signals) noexcept {
   aria2::Session* session = nullptr;
-  bool initialized = false;
+  // aria2 tears down its non-recreatable PrefFactory in libraryDeinit().
+  // Keep global runtime resources alive for the process; finalize each session.
+  static std::mutex engineMutex;
+  std::lock_guard<std::mutex> engineLock(engineMutex);
   int result = -1;
   try {
     gdirect_ip = ip;
     gdirect_sni = sni;
-    if (aria2::libraryInit() != 0) return -1;
-    initialized = true;
+    static const int initializationResult = aria2::libraryInit();
+    if (initializationResult != 0) return -1;
     aria2::KeyVals opts = {
       {"dir", dir}, {"out", name}, {"continue", "true"},
       {"auto-file-renaming", "false"}, {"allow-overwrite", "false"},
@@ -73,7 +77,6 @@ extern "C" int gdirect_download_ex(const char* url, const char* dir, const char*
     result = -1;
     if (session) { try { aria2::sessionFinal(session); } catch (...) {} }
   }
-  if (initialized) { try { aria2::libraryDeinit(); } catch (...) { result = -1; } }
   gdirect_ip = gdirect_sni = nullptr;
   if (!callback) std::fprintf(stderr, "\n");
   return result;
