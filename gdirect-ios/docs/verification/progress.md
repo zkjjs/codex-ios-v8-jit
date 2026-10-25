@@ -20,3 +20,7 @@
 
 - Cloud build succeeded: run 40176502030, commit 44037927fe7bd08b91067fadb6f1d14cda77da57, Xcode 27.1 / iOS 27.1 SDK.
 - ARCHIVE SUCCEEDED, unsigned IPA uploaded as artifact 12593185739. Core cloud tests passed. Signing, configured OAuth and background device acceptance remain pending.
+
+- v0.2 run 40178803897: Release IPA built, 12 Swift support + 9 iOS simulator tests passed, 9 Rust + 4 Python tests passed.
+- User scope: delete local files only; added opt-in clipboard pattern detection and per-IP diagnostics/import.
+- OAuth client ID is still missing; real Google login remains pending user-owned configuration.
