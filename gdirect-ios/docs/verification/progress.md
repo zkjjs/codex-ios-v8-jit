@@ -13,3 +13,10 @@
 - Review: fresh reviewer found four important issues (pause/resume overlap, ineffective background redirect delegate, finalization recovery gap, stale finalization errors). Added cancellation acknowledgment, per-attempt event identity, durable response metadata/staging recovery and generation-gated finalization. Removed ineffective redirect delegate; documented system redirect ownership.
 - Swift lifecycle/store tests are written but NOT executed; no Apple SDK available.
 - Tasks 1–5 remain partial: native iOS linking, OAuth integration, Swift tests, Release IPA and real-device background acceptance cannot be marked complete from this host.
+- GitHub compilation authorized: user allowed any accessible repository.
+- Uploaded 40 project files under gdirect-ios/ on isolated branch codex/ios-build/gdirect-20261025 in zkjjs/codex-ios-v8-jit. Original default branch untouched.
+- Initial commit 4be0ad35714b587d2b67d057d1718ae8306bc43b.
+- Actions run started: https://github.com/zkjjs/codex-ios-v8-jit/actions/runs/40175789609 . Result pending.
+
+- Cloud build succeeded: run 40176502030, commit 44037927fe7bd08b91067fadb6f1d14cda77da57, Xcode 27.1 / iOS 27.1 SDK.
+- ARCHIVE SUCCEEDED, unsigned IPA uploaded as artifact 12593185739. Core cloud tests passed. Signing, configured OAuth and background device acceptance remain pending.

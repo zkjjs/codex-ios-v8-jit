@@ -2,7 +2,9 @@
 
 面向 iOS 27 的 Google Drive 下载客户端。SwiftUI 界面、Rust 解析与网络核心、静态 libaria2 直连引擎。
 
-**当前状态：初版源码；Rust 核心已在 Linux 构建和测试。尚未通过 Xcode 编译或真机后台验收，没有已生成的 IPA。**
+**当前状态：已通过 GitHub Actions 的 Xcode 27.1 / iOS 27.1 SDK Release Archive 编译，生成未签名 IPA。后台下载尚未通过真机验收。**
+
+[下载本次 IPA](https://github.com/zkjjs/codex-ios-v8-jit/actions/runs/40176502030/artifacts/12593185739) · [构建记录](https://github.com/zkjjs/codex-ios-v8-jit/actions/runs/40176502030)
 
 ## 编译 IPA
 
@@ -15,7 +17,7 @@ brew install xcodegen
 
 输出：`build/GDirect-unsigned.ipa`。这是未签名安装包，安装前需签名。
 
-已准备 `.github/workflows/build-ios.yml`，可在具有 iOS 27 SDK 的 GitHub macOS runner 上手动构建并下载 artifact；当前未推送仓库、未触发远程构建。
+已准备 `.github/workflows/build-ios.yml`，可在具有 iOS 27 SDK 的 GitHub macOS runner 上手动构建并下载 artifact；本次已在 `zkjjs/codex-ios-v8-jit` 的独立分支 `codex/ios-build/gdirect-20261025` 完成云端构建；源码位于 `gdirect-ios/`，默认分支保持原样。
 
 要直接导出签名 IPA，设置 `GDIRECT_TEAM_ID`、`GDIRECT_EXPORT_OPTIONS`（Xcode 导出配置 plist 路径），再执行 `./scripts/archive-ios.sh`。签名证书及 provisioning profile 需要在 Mac 上配置。
 
