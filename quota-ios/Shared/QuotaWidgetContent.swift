@@ -12,7 +12,7 @@ struct QuotaEntry: TimelineEntry {
 struct QuotaWidgetContent: View {
     let entry: QuotaEntry
     let dark: Bool
-    @Environment(\.widgetFamily) private var family
+    let family: WidgetFamily
     private var ink: Color { dark ? .white : .black }
     private var stale: Bool { entry.message != nil || entry.snapshot?.isStale(at: entry.date) == true }
 

@@ -51,15 +51,16 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
 struct QuotaWidgetView: View {
     let entry: QuotaEntry
     let dark: Bool
+    @Environment(\.widgetFamily) private var family
     private var paper: Color { dark ? Color(white: 0.07) : Color(white: 0.98) }
 
     var body: some View {
         Group {
             if #available(iOS 17.0, *) {
-                QuotaWidgetContent(entry: entry, dark: dark)
+                QuotaWidgetContent(entry: entry, dark: dark, family: family)
                     .containerBackground(for: .widget) { paper }
             } else {
-                QuotaWidgetContent(entry: entry, dark: dark).padding(16).background(paper)
+                QuotaWidgetContent(entry: entry, dark: dark, family: family).padding(16).background(paper)
             }
         }.widgetURL(URL(string: "codexquota://open"))
     }

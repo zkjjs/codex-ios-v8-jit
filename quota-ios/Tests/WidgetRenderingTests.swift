@@ -79,9 +79,8 @@ final class WidgetRenderingTests: XCTestCase {
 
     @MainActor
     private func render(_ entry: QuotaEntry, dark: Bool, redacted: Bool = false) throws -> UIImage {
-        let view = QuotaWidgetContent(entry: entry, dark: dark)
-            .environment(\.widgetFamily, .systemSmall)
-            .environment(\.redactionReasons, redacted ? .placeholder : [])
+        let view = QuotaWidgetContent(entry: entry, dark: dark, family: .systemSmall)
+            .redacted(reason: redacted ? .placeholder : [])
             .frame(width: 140, height: 140).padding(16)
             .background(dark ? Color(white: 0.07) : Color(white: 0.98))
         let renderer = ImageRenderer(content: view)
