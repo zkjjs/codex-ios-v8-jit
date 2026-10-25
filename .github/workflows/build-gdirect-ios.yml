@@ -36,6 +36,8 @@ jobs:
           echo "sdk=$sdk_version" >> "$GITHUB_OUTPUT"
           echo "rust=$(rustc --version | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
           test "${sdk_version%%.*}" -ge 27 || { echo "Select a runner with Xcode/iOS SDK 27 or newer."; exit 1; }
+      - name: Test Swift support
+        run: swift test --package-path .
       - run: brew install xcodegen
       - uses: actions/cache/restore@v4
         id: native-cache
