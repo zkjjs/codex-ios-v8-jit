@@ -1,7 +1,0 @@
-Generated/
-*.xcodeproj/
-build-*/
-out/
-__pycache__/
-*.pyc
-.DS_Store

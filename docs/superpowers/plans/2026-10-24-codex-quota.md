@@ -30,9 +30,9 @@
 Files: `quota-ios/backend/quota_service.py`, `quota-ios/backend/tests/test_quota_service.py`.
 Produces: authenticated `GET /v1/quota`, JSON `{version,updatedAt,stale,plan,windows:[{id,title,usedPercent,remainingPercent,windowMinutes,resetsAt}]}`; `GET /health` contains no account data.
 
-- [ ] Write normalization, cache-failure and HTTP authorization tests; run and observe missing behavior.
-- [ ] Implement finite validated quota mapping, app-server JSON-RPC transport, bounded caching, HTTP routes.
-- [ ] Run `python3 -m unittest discover -s quota-ios/backend/tests -v`; all pass.
+- [x] Write normalization, cache-failure and HTTP authorization tests; run and observe missing behavior.
+- [x] Implement finite validated quota mapping, app-server JSON-RPC transport, bounded caching, HTTP routes.
+- [x] Run `python3 -m unittest discover -s quota-ios/backend/tests -v`; all pass.
 
 ### Task 2: App and widgets
 
@@ -40,9 +40,9 @@ Files: `quota-ios/Shared/*.swift`, `quota-ios/App/*.swift`, `quota-ios/Widget/*.
 Consumes: Task 1 snapshot schema and bearer endpoint.
 Produces: app, black/white small/medium widgets, model XCTest target.
 
-- [ ] Write XCTest cases for decoding nullable resets, remaining clamping, stale timestamps, and past resets before models.
-- [ ] Implement models, HTTPS client, Keychain and optional App Group configuration, Chinese glass interface, and WidgetKit providers with manual iOS 17+ fallback.
-- [ ] Generate/build/test in the GitHub macOS job; inspect actual diagnostics and repair failures.
+- [x] Write XCTest cases for decoding nullable resets, remaining clamping, stale timestamps, and past resets before models.
+- [x] Implement models, HTTPS client, Keychain and optional App Group configuration, Chinese glass interface, and WidgetKit providers with manual iOS 17+ fallback.
+- [x] Generate/build/test in the GitHub macOS job; inspect actual diagnostics and repair failures.
 
 ### Task 3: Deployment and IPA delivery
 
@@ -50,7 +50,7 @@ Files: `.github/workflows/build-codex-quota.yml`, `quota-ios/scripts/package-ipa
 Consumes: compiled `.app` and Task 1 service.
 Produces: deployed read-only HTTPS route, Actions unsigned IPA artifact, reproducible instructions.
 
-- [ ] Deploy loopback service with private generated code and isolated nginx location; validate config before reload.
-- [ ] Check health, unauthorized request rejection, and authenticated live quota via public HTTPS.
-- [ ] Publish branch via GitHub tools and inspect Actions run; retrieve IPA if successful.
-- [ ] Run all repository tests, inspect diffs for credentials and unrelated changes, record evidence and remaining device-signing limits.
+- [x] Deploy loopback service with private generated code and isolated nginx location; validate config before reload.
+- [x] Check health, unauthorized request rejection, and authenticated live quota via public HTTPS.
+- [x] Publish branch via GitHub tools and inspect Actions run; retrieve IPA if successful.
+- [x] Run all repository tests, inspect diffs for credentials and unrelated changes, record evidence and remaining device-signing limits.
