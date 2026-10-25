@@ -1,4 +1,5 @@
+// Public Google iOS OAuth client identifier; no client secret.
 GDIRECT_BUNDLE_ID = org.gdirect.ios
-GOOGLE_CLIENT_ID = configure-ios-oauth.apps.googleusercontent.com
-GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.configure-ios-oauth
+GOOGLE_CLIENT_ID = 917081012326-egou4olg1qkk36gsc8dsvf6t9agbcneh.apps.googleusercontent.com
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.917081012326-egou4olg1qkk36gsc8dsvf6t9agbcneh
 #include? "Config.local.xcconfig"
