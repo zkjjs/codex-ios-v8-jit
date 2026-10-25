@@ -5,9 +5,37 @@ enum SharedStore {
     static let group = "group.com.zkjjs.codexquota"
     private static let service = "com.zkjjs.codexquota.connection"
 
+    // SideStore may add a signing-team suffix to the original group identifier.
+    // Profile/Info metadata only supplies candidates; iOS validates container access.
+    private static let sharedGroup: String? = {
+        let metadata = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String] ?? []
+        let profile = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision")
+            .flatMap { try? Data(contentsOf: $0) }
+        return groupCandidates(metadata: metadata, profile: profile).first {
+            FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil
+        }
+    }()
+
     private static var shared: UserDefaults? {
-        guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil else { return nil }
-        return UserDefaults(suiteName: group)
+        sharedGroup.flatMap { UserDefaults(suiteName: $0) }
+    }
+
+    static func groupCandidates(metadata: [String], profile: Data?) -> [String] {
+        var profileGroups: [String] = []
+        if let data = profile,
+           let start = data.range(of: Data("<?xml".utf8)),
+           let end = data.range(of: Data("</plist>".utf8), in: start.lowerBound..<data.endIndex),
+           let value = try? PropertyListSerialization.propertyList(
+                from: data.subdata(in: start.lowerBound..<end.upperBound), options: [], format: nil),
+           let dictionary = value as? [String: Any],
+           let entitlements = dictionary["Entitlements"] as? [String: Any] {
+            profileGroups = entitlements["com.apple.security.application-groups"] as? [String] ?? []
+        }
+        var seen = Set<String>()
+        // Prefer the signed profile's matching group, never an unrelated certificate group.
+        return (profileGroups + metadata + [group]).filter {
+            ($0 == group || $0.hasPrefix(group + ".")) && seen.insert($0).inserted
+        }
     }
 
     static var groupAvailable: Bool { shared != nil }
@@ -19,7 +47,11 @@ enum SharedStore {
         var result: CFTypeRef?
         if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
            let data = result as? Data,
-           let value = try? JSONDecoder().decode(ServerConnection.self, from: data) { return value }
+           let value = try? JSONDecoder().decode(ServerConnection.self, from: data) {
+            // Migrate a previously paired App after installing a build with group support.
+            shared?.set(data, forKey: "serverConnection")
+            return value
+        }
         return widgetConnection()
     }
 

@@ -33,7 +33,7 @@ struct ConnectionView: View {
                 Section("桌面小组件") {
                     Label("黑色 / 白色 · 小号 / 中号", systemImage: "square.grid.2x2")
                     Text(SharedStore.groupAvailable
-                         ? "当前签名支持共享配置，连接后可直接添加小组件。"
+                         ? "当前签名支持共享配置。在 App 连接一次后，小组件留空服务器地址和查询码即可自动读取；已有手填配置请先清空。"
                          : "当前签名未提供 App Groups。iOS 17 及以上可长按小组件 → 编辑小组件，分别填写服务器地址和查询码；iOS 16 需要支持 App Groups 的签名。")
                         .font(.caption).foregroundStyle(.secondary)
                     Text("液态玻璃在 iOS 26 启用；桌面玻璃效果跟随系统的透明/着色模式。")

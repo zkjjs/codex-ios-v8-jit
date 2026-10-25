@@ -2,6 +2,24 @@ import XCTest
 @testable import CodexQuota
 
 final class QuotaTests: XCTestCase {
+    func testSideStoreGroupSuffixIsDiscoveredWithoutUnrelatedGroups() throws {
+        let group = SharedStore.group
+        let profile = try PropertyListSerialization.data(fromPropertyList: [
+            "Entitlements": ["com.apple.security.application-groups": ["group.unrelated", group + ".TEAM123"]]
+        ], format: .xml, options: 0)
+        let cmsFixture = Data([0x30, 0x82, 0x00]) + profile + Data([0x00, 0xff])
+        XCTAssertEqual(SharedStore.groupCandidates(metadata: [group], profile: cmsFixture),
+                       [group + ".TEAM123", group])
+    }
+
+    func testMissingOrMalformedProfileKeepsSafeMetadataFallback() {
+        let group = SharedStore.group
+        XCTAssertEqual(SharedStore.groupCandidates(metadata: [group + ".TEAM", group + ".TEAM",
+                           group + "evil", "group.unrelated"], profile: Data("broken".utf8)),
+                       [group + ".TEAM", group])
+        XCTAssertEqual(SharedStore.groupCandidates(metadata: [], profile: nil), [group])
+    }
+
     func testDecodeRealSnapshotAndMissingReset() throws {
         let data = Data("""
         {"version":1,"updatedAt":100,"stale":false,"plan":"plus","windows":[
