@@ -8,7 +8,11 @@ if [[ "$(uname -s)" != Darwin ]]; then
 fi
 command -v xcodegen >/dev/null
 command -v cargo >/dev/null
-./scripts/build-ios-core.sh
+if [[ "${GDIRECT_USE_CACHED_CORE:-0}" == 1 ]]; then
+  [[ -d build/GDirectCore.xcframework ]] || { echo "Native core cache is missing." >&2; exit 1; }
+else
+  ./scripts/build-ios-core.sh
+fi
 (cd ios && xcodegen generate)
 xcodebuild -project ios/GDirect.xcodeproj -scheme GDirect -configuration Release \
   -destination 'generic/platform=iOS' -archivePath build/GDirect-unsigned.xcarchive \

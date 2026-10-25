@@ -92,9 +92,9 @@ final class BackgroundDownloadEngine: NSObject, URLSessionDownloadDelegate, @unc
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let (id, attempt) = identity(task), let error else { return }
         if isStopped(task) { return } // cancel(byProducingResumeData:) owns the pause event.
-        let error = error as NSError
-        let resumeData = error.userInfo[NSURLSessionDownloadTaskResumeData] as? Data
-        let message = "后台下载中断（\(error.code)），可点击继续重试。"
+        let nsError = error as NSError
+        let resumeData = nsError.userInfo[NSURLSessionDownloadTaskResumeData] as? Data
+        let message = "后台下载中断（\(nsError.code)），可点击继续重试。"
         emit(id, attempt, .failed(message, resumeData))
     }
     // Background URLSession follows redirects itself; its redirect delegate is not called.

@@ -40,7 +40,7 @@ struct TransferRecord: Identifiable, Codable {
     var createdAt = Date()
     var confirmationAttempts = 0
     var attemptID = UUID()
-    let recoveryVersion = 1
+    var recoveryVersion = 1
 
     init(input: String, name: String, accountID: String?, engine: DownloadEngineKind, ip: String?, exportMIME: String? = nil) {
         self.id = UUID()

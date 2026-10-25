@@ -10,7 +10,7 @@ final class ContinuedDownloadRunner {
 
     private func identifier(_ id: UUID) -> String { "\(Bundle.main.bundleIdentifier!).download.\(id.uuidString)" }
 
-    func submit(id: UUID, name: String, run: @escaping (BGContinuedProcessingTask) -> Void) throws {
+    func submit(id: UUID, name: String, run: @escaping (BGContinuedProcessingTask) -> Void) async throws {
         guard active.isEmpty, pending.isEmpty else { throw AppFailure(message: "请先暂停当前直连下载，再启动另一个任务。") }
         let identifier = identifier(id)
         if !registrations.contains(identifier) {
@@ -32,7 +32,7 @@ final class ContinuedDownloadRunner {
         pending[id] = run
         let request = BGContinuedProcessingTaskRequest(identifier: identifier, title: "gdirect 下载", subtitle: name)
         request.strategy = .queue
-        do { try BGTaskScheduler.shared.submit(request) }
+        do { try await BGTaskScheduler.shared.submitTaskRequest(request) }
         catch { pending.removeValue(forKey: id); throw AppFailure(message: "系统暂时无法接受后台直连任务，请稍后重试。") }
     }
     func cancelPending(_ id: UUID) {

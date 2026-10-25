@@ -28,13 +28,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Check Xcode SDK
+        id: toolchain
         run: |
           xcodebuild -version
           xcodebuild -showsdks
           sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "sdk=$sdk_version" >> "$GITHUB_OUTPUT"
+          echo "rust=$(rustc --version | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
           test "${sdk_version%%.*}" -ge 27 || { echo "Select a runner with Xcode/iOS SDK 27 or newer."; exit 1; }
       - run: brew install xcodegen
+      - uses: actions/cache/restore@v4
+        id: native-cache
+        with:
+          path: gdirect-ios/build/GDirectCore.xcframework
+          key: gdirect-native-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.sdk }}-${{ steps.toolchain.outputs.rust }}-${{ hashFiles('gdirect-ios/core/Cargo.toml', 'gdirect-ios/core/Cargo.lock', 'gdirect-ios/core/build.rs', 'gdirect-ios/core/src/**', 'gdirect-ios/native/**', 'gdirect-ios/vendor/**', 'gdirect-ios/scripts/build-ios-core.sh') }}
       - name: Compile unsigned IPA
+        env:
+          GDIRECT_USE_CACHED_CORE: ${{ steps.native-cache.outputs.cache-hit == 'true' && '1' || '0' }}
         run: |
           set -o pipefail
           ./scripts/build-unsigned-ipa.sh 2>&1 | tee ios-build.log
@@ -50,3 +60,9 @@ jobs:
           name: ios-build-log
           path: gdirect-ios/ios-build.log
           if-no-files-found: ignore
+      - name: Cache compiled native core
+        if: always() && steps.native-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: gdirect-ios/build/GDirectCore.xcframework
+          key: ${{ steps.native-cache.outputs.cache-primary-key }}

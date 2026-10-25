@@ -103,7 +103,7 @@ final class DownloadCoordinator {
                 cancellations[id] = cancellation
                 update(id) { $0.state = .waitingForSystem }
                 do {
-                    try continued.submit(id: id, name: record.name) { [weak self] task in
+                    try await continued.submit(id: id, name: record.name) { [weak self] task in
                         self?.runDirect(id: id, url: url, task: task, cancellation: cancellation)
                     }
                 } catch {
