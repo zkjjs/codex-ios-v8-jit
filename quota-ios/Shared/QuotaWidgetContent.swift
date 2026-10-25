@@ -21,7 +21,7 @@ struct QuotaWidgetContent: View {
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: family == .systemSmall ? 10 : 12) {
+        VStack(alignment: .leading, spacing: family == .systemSmall ? 6 : 10) {
             HStack {
                 Text("CODEX").font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(2)
                 Spacer(minLength: 3)
@@ -44,48 +44,89 @@ struct QuotaWidgetContent: View {
     private func small(_ snapshot: QuotaSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             ForEach(snapshot.windows.prefix(2)) { window in
-                HStack(alignment: .firstTextBaseline) {
-                    Text(window.title).font(.system(size: 10)).lineLimit(1).minimumScaleFactor(0.7)
-                    Spacer(minLength: 2)
-                    Text(window.remainingText + "%").font(.system(size: 27, weight: .light, design: .rounded))
-                        .monospacedDigit().minimumScaleFactor(0.7)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(shortTitle(window)).font(.system(size: 10, weight: .medium))
+                        Spacer(minLength: 0)
+                        Text("剩余").font(.system(size: 9)).opacity(0.6)
+                        Text(window.remainingText + "%")
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    quotaBar(window, height: 4)
+                    Text(resetLabel(window))
+                        .font(.system(size: 9)).foregroundStyle(ink.opacity(0.65))
+                        .lineLimit(1).minimumScaleFactor(0.8)
                 }
             }
             Spacer(minLength: 0)
-            if let window = snapshot.windows.first { resetLine(window) }
-            if stale { Text("历史数据 · 待更新").font(.system(size: 9)).opacity(0.6) }
+            updateLine(snapshot)
         }
     }
 
     private func medium(_ snapshot: QuotaSnapshot) -> some View {
-        HStack(alignment: .top, spacing: 22) {
-            ForEach(snapshot.windows.prefix(2)) { window in
-                VStack(alignment: .leading, spacing: 7) {
-                    Text(window.title).font(.system(size: 11)).opacity(0.6)
-                    Text(window.remainingText + "%")
-                        .font(.system(size: 37, weight: .light, design: .rounded)).monospacedDigit()
-                        .minimumScaleFactor(0.6).lineLimit(1)
-                    GeometryReader { geometry in
-                        Capsule().fill(ink.opacity(0.12)).overlay(alignment: .leading) {
-                            Capsule().fill(ink.opacity(0.8)).frame(width: geometry.size.width * window.progress)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 22) {
+                ForEach(snapshot.windows.prefix(2)) { window in
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(shortTitle(window)).font(.system(size: 11, weight: .medium))
+                            Text("剩余").font(.system(size: 10)).opacity(0.6)
                         }
-                    }.frame(height: 3)
-                    resetLine(window)
-                }.frame(maxWidth: .infinity, alignment: .leading)
+                        Text(window.remainingText + "%")
+                            .font(.system(size: 32, weight: .semibold, design: .rounded))
+                            .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+                        quotaBar(window, height: 5)
+                        Text(resetLabel(window)).font(.system(size: 10))
+                            .foregroundStyle(ink.opacity(0.65)).lineLimit(1).minimumScaleFactor(0.8)
+                        if let reset = window.resetDate, !window.awaitingReset(at: entry.date) {
+                            HStack(spacing: 3) {
+                                Text("距重置")
+                                Text(timerInterval: entry.date...reset, countsDown: true)
+                                    .monospacedDigit()
+                            }.font(.system(size: 9)).foregroundStyle(ink.opacity(0.55)).lineLimit(1)
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
-        }.overlay(alignment: .bottomTrailing) {
-            if stale { Text("待更新").font(.system(size: 8)).opacity(0.5).offset(y: 13) }
+            Spacer(minLength: 0)
+            updateLine(snapshot)
         }
     }
 
-    private func resetLine(_ window: QuotaWindow) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: "arrow.clockwise")
-            if let reset = window.resetDate, !window.awaitingReset(at: entry.date) {
-                Text(timerInterval: entry.date...reset, countsDown: true).monospacedDigit()
-            } else {
-                Text(window.resetDate == nil ? "重置时间未知" : "等待额度更新")
+    private func shortTitle(_ window: QuotaWindow) -> String {
+        window.title.replacingOccurrences(of: "额度", with: "")
+            .trimmingCharacters(in: .whitespaces)
+    }
+
+    private func quotaBar(_ window: QuotaWindow, height: CGFloat) -> some View {
+        GeometryReader { geometry in
+            Capsule().fill(ink.opacity(0.1)).overlay(alignment: .leading) {
+                Capsule().fill(ink.opacity(0.85))
+                    .frame(width: geometry.size.width * window.progress)
             }
-        }.font(.system(size: 10)).foregroundStyle(ink.opacity(0.6)).lineLimit(1)
+        }.frame(height: height)
+    }
+
+    private func resetLabel(_ window: QuotaWindow) -> String {
+        guard let reset = window.resetDate else { return "重置时间未知" }
+        guard !window.awaitingReset(at: entry.date) else { return "已到重置时间 · 待更新" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.timeZone = .current
+        formatter.dateFormat = "M/d HH:mm"
+        return formatter.string(from: reset) + " 重置"
+    }
+
+    private func updateLine(_ snapshot: QuotaSnapshot) -> some View {
+        HStack(spacing: 3) {
+            if stale {
+                Image(systemName: "clock.badge.exclamationmark")
+                Text("历史数据 · 待更新")
+            } else {
+                Text("更新于")
+                Text(snapshot.updatedDate, style: .time)
+            }
+        }.font(.system(size: 8)).foregroundStyle(ink.opacity(0.5)).lineLimit(1)
     }
 }
