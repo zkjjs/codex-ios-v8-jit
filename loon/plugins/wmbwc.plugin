@@ -1,0 +1,11 @@
+#!name=歪麦霸王餐 · Loon
+#!desc=进入 App 的“我的”保存账号，每日 08:10 运行；需开启 HTTPS 解密并信任 Loon 证书。实际以服务端返回为准。
+#!author=Sliverkiss (协议来源), zkjjs (Loon 适配)
+#!homepage=https://github.com/zkjjs/codex-ios-v8-jit/tree/loon-scripts/loon
+
+[Script]
+http-request ^https:\/\/wmapp-api\.waimaimingtang\.com/api/api/v2/user/api_user_info_one(?:\?|$) script-path=https://raw.githubusercontent.com/zkjjs/codex-ios-v8-jit/loon-scripts/loon/scripts/wmbwc.js,requires-body=true,timeout=15,tag=歪麦霸王餐获取账号
+cron "10 8 * * *" script-path=https://raw.githubusercontent.com/zkjjs/codex-ios-v8-jit/loon-scripts/loon/scripts/wmbwc.js,timeout=300,tag=歪麦霸王餐每日任务
+
+[MITM]
+hostname = wmapp-api.waimaimingtang.com
